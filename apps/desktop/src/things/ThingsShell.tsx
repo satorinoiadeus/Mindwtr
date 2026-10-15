@@ -20,17 +20,31 @@ type Selection = { kind: 'list'; id: ThingsList } | { kind: 'project'; id: strin
 function Row({ task }: { task: Task }) {
     const done = task.checklist?.filter((c) => c.isCompleted).length ?? 0;
     const total = task.checklist?.length ?? 0;
+    const store = () => useTaskStore.getState();
+    const trashed = !!task.deletedAt;
+    const finished = task.status === 'done';
     return (
-        <li className="flex items-start gap-3 py-1.5">
-            <span className="mt-1 h-4 w-4 shrink-0 rounded-full border border-current opacity-60" />
-            <div className="min-w-0">
-                <div className="truncate">{task.title}</div>
+        <li className="group flex items-start gap-3 py-1.5">
+            {trashed ? (
+                <button className="mt-0.5 text-xs underline opacity-70" onClick={() => void store().restoreTask(task.id)}>Restore</button>
+            ) : (
+                <button
+                    aria-label={finished ? 'Mark as not done' : 'Complete'}
+                    className={`mt-1 h-4 w-4 shrink-0 rounded-full border border-current ${finished ? 'bg-current opacity-60' : 'opacity-60 hover:opacity-100'}`}
+                    onClick={() => void store().moveTask(task.id, finished ? 'next' : 'done')}
+                />
+            )}
+            <div className="min-w-0 flex-1">
+                <div className={`truncate ${finished ? 'line-through opacity-50' : ''}`}>{task.title}</div>
                 <div className="flex gap-2 text-xs opacity-60">
                     {total > 0 && <span>{done}/{total}</span>}
                     {task.dueDate && <span>Due {task.dueDate.slice(0, 10)}</span>}
                     {task.tags.map((t) => <span key={t}>#{t.replace(/^#/, '')}</span>)}
                 </div>
             </div>
+            {!trashed && (
+                <button aria-label="Delete" className="text-xs opacity-0 group-hover:opacity-60" onClick={() => void store().deleteTask(task.id)}>Delete</button>
+            )}
         </li>
     );
 }
