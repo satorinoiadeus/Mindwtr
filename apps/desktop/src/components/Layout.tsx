@@ -8,7 +8,6 @@ import {
     ChevronDown,
     Folder,
     Settings,
-    Target,
     Search,
     ChevronsLeft,
     ChevronsRight,
@@ -19,6 +18,8 @@ import {
     Plus,
     RefreshCw,
     type LucideIcon,
+    Layers,
+    Star,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { isSandboxMode, shallow, useTaskStore, resolveFeatureFlags, safeFormatDate, tFallback, isAllowedInsecureUrl, formatTaskMovedMessage, isSyncFileLockUnavailableError } from '@mindwtr/core';
@@ -342,16 +343,18 @@ export function Layout({
             key: 'focus',
             label: tFallback(t, 'nav.sectionFocus', 'Focus'),
             items: [
-                { id: 'agenda', labelKey: 'nav.agenda', icon: Target, tone: 'primary' },
-                { id: 'inbox', labelKey: 'nav.inbox', icon: TASK_STATUS_ICONS.inbox, count: inboxCount, tone: 'primary' },
+                { id: 'inbox', fallbackLabel: 'Inbox', icon: TASK_STATUS_ICONS.inbox, count: inboxCount, tone: 'primary' },
+                { id: 'agenda', fallbackLabel: 'Today', icon: Star, tone: 'primary' },
+                { id: 'calendar', fallbackLabel: 'Upcoming', icon: Calendar, tone: 'primary' },
+                { id: 'next', fallbackLabel: 'Anytime', icon: Layers, tone: 'primary' },
+                { id: 'someday', fallbackLabel: 'Someday', icon: TASK_STATUS_ICONS.someday },
             ],
         },
         {
             key: 'lists',
-            label: tFallback(t, 'nav.sectionLists', 'Lists'),
+            label: 'Areas & Projects',
             items: [
-                { id: 'projects', labelKey: 'nav.projects', icon: Folder, tone: 'primary' },
-                { id: 'someday', labelKey: 'nav.someday', icon: TASK_STATUS_ICONS.someday },
+                { id: 'projects', fallbackLabel: 'Areas & Projects', icon: Folder, tone: 'primary' },
                 { id: 'waiting', labelKey: 'nav.waiting', icon: TASK_STATUS_ICONS.waiting },
             ],
         },
@@ -359,7 +362,6 @@ export function Layout({
             key: 'organize',
             label: tFallback(t, 'nav.sectionOrganize', 'Organize'),
             items: [
-                { id: 'calendar', labelKey: 'nav.calendar', icon: Calendar },
                 { id: 'review', labelKey: 'nav.review', icon: CheckCircle2 },
                 { id: 'contexts', labelKey: 'nav.contexts', icon: Tag },
             ],
@@ -378,8 +380,7 @@ export function Layout({
                     : []),
                 {
                     id: 'history',
-                    labelKey: 'nav.history',
-                    fallbackLabel: 'History',
+                    fallbackLabel: 'Logbook',
                     icon: HistoryIcon,
                     tone: 'recessed',
                     activeIds: ['done', 'archived'],
@@ -964,9 +965,9 @@ export function Layout({
                                         data-view={item.id}
                                         data-active-views={item.activeIds?.join(' ')}
                                         className={cn(
-                                            "w-full flex items-center rounded-md text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset",
+                                            "kawaii-nav-item w-full flex items-center rounded-xl text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset",
                                             itemWeightClass,
-                                            isActiveItem ? "bg-primary/5 text-primary" : inactiveItemClass,
+                                            isActiveItem ? "bg-primary/15 text-primary font-semibold kawaii-nav-active" : inactiveItemClass,
                                             isCollapsed ? "h-10 justify-center px-2" : "h-9 justify-between px-2.5",
                                             // Last so they win the merge: the drop target has to read as
                                             // available even on the active item's own tinted background.

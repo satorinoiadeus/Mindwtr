@@ -915,3 +915,94 @@ html {
     /* `rotate`, not `transform`, so it composes with any transform utility on the element. */
     rotate: var(--mindwtr-spin-angle, 0deg);
 }
+
+/* ===== Kawaii pink theme + Things-style motion ===== */
+@layer base {
+  :root {
+    color-scheme: light;
+    --background: 340 100% 98%;
+    --foreground: 330 35% 22%;
+    --card: 0 0% 100%;
+    --card-foreground: 330 35% 22%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 330 35% 22%;
+    --primary: 336 78% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 340 80% 95%;
+    --secondary-foreground: 330 35% 28%;
+    --muted: 340 70% 95%;
+    --muted-foreground: 332 20% 38%;
+    --accent: 340 85% 94%;
+    --accent-foreground: 330 35% 28%;
+    --border: 338 60% 88%;
+    --input: 338 60% 88%;
+    --ring: 336 78% 56%;
+    --status-inbox: 336 78% 50%;
+    --status-someday: 280 60% 60%;
+    --badge-project-bg: 340 90% 94%;
+    --badge-project-fg: 336 45% 32%;
+    --radius: 0.9rem;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --background: 320 22% 12%;
+    --foreground: 335 40% 92%;
+    --card: 320 20% 16%;
+    --card-foreground: 335 40% 92%;
+    --popover: 320 20% 14%;
+    --popover-foreground: 335 40% 92%;
+    --primary: 334 85% 72%;
+    --primary-foreground: 320 30% 12%;
+    --secondary: 320 18% 21%;
+    --secondary-foreground: 335 30% 88%;
+    --muted: 320 16% 22%;
+    --muted-foreground: 330 18% 72%;
+    --accent: 320 20% 24%;
+    --accent-foreground: 335 40% 92%;
+    --border: 320 16% 30%;
+    --input: 320 16% 30%;
+    --ring: 334 85% 72%;
+    --status-inbox: 334 85% 72%;
+    --badge-project-bg: 330 25% 26%;
+    --badge-project-fg: 335 45% 88%;
+    --radius: 0.9rem;
+  }
+}
+
+/* Sidebar: soft pill, small nudge on hover, squish on press */
+.kawaii-nav-item {
+  transition: background-color 160ms ease, color 160ms ease, transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.kawaii-nav-item:hover { transform: translateX(3px); }
+.kawaii-nav-item:active { transform: scale(0.97); }
+.kawaii-nav-active { box-shadow: 0 1px 0 hsl(var(--primary) / 0.18), 0 4px 12px -6px hsl(var(--primary) / 0.45); }
+
+/* Buttons and checkboxes: bouncy press */
+button, [role='checkbox'], input[type='checkbox'] {
+  transition-property: background-color, border-color, color, box-shadow, transform;
+  transition-duration: 160ms;
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+button:active:not(:disabled), [role='checkbox']:active { transform: scale(0.94); }
+input[type='checkbox'] { accent-color: hsl(var(--primary)); border-radius: 9999px; }
+input[type='checkbox']:checked { animation: kawaii-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* Cards, popovers and task rows ease in */
+@keyframes kawaii-pop {
+  0% { transform: scale(0.7); }
+  60% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+@keyframes kawaii-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+main [data-task-id], main li, [role='dialog'] { animation: kawaii-rise 220ms ease-out both; }
+
+::selection { background: hsl(var(--primary) / 0.25); }
+
+@media (prefers-reduced-motion: reduce) {
+  .kawaii-nav-item:hover, .kawaii-nav-item:active, button:active:not(:disabled) { transform: none; }
+  main [data-task-id], main li, [role='dialog'], input[type='checkbox']:checked { animation: none; }
+}
