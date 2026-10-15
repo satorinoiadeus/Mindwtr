@@ -1,9 +1,0 @@
-{
-  "platforms": ["ios"],
-  "ios": {
-    "podspecPath": "ios/MindwtrWatchConnectivity.podspec",
-    "swiftModuleName": "MindwtrWatchConnectivity",
-    "modules": ["MindwtrWatchConnectivityModule"],
-    "appDelegateSubscribers": ["MindwtrWatchConnectivityAppDelegateSubscriber"]
-  }
-}
