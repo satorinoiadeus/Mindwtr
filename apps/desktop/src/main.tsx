@@ -277,7 +277,9 @@ async function bootstrap() {
     // a sandbox renderer before React mounts.
     const RootApp = isQuickAddWindow
         ? (await import('./QuickAddWindowApp.tsx')).QuickAddWindowApp
-        : (await import('./App.tsx')).default;
+        : new URLSearchParams(window.location.search).has('things')
+            ? (await import('./things/ThingsApp.tsx')).ThingsApp
+            : (await import('./App.tsx')).default;
 
     const initialLanguage = sandboxSettings?.language && sandboxSettings.language !== 'system'
         ? sandboxSettings.language as Language

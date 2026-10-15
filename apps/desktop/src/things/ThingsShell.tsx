@@ -2,7 +2,7 @@
 import { useTaskStore, type Task } from '@mindwtr/core';
 import {
     selectAnytime, selectInbox, selectLogbook, selectSomeday, selectToday, selectTrash, selectUpcoming,
-    type ThingsList,
+    localDayKey, type ThingsList,
 } from './selectors';
 
 const LISTS: { id: ThingsList; label: string }[] = [
@@ -123,8 +123,41 @@ export function ThingsShell() {
             </nav>
             <main className="flex-1 overflow-y-auto p-8">
                 <h1 className="mb-6 text-2xl font-bold">{title}</h1>
+                <QuickEntry sel={sel} />
                 {body}
             </main>
         </div>
+    );
+}
+
+function dayOffset(n: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return localDayKey(d);
+}
+
+function QuickEntry({ sel }: { sel: Selection }) {
+    const [text, setText] = useState('');
+    if (sel.kind === 'list' && (sel.id === 'logbook' || sel.id === 'trash')) return null;
+    const submit = () => {
+        const title = text.trim();
+        if (!title) return;
+        let props: Partial<Task> = { status: 'next' };
+        if (sel.kind === 'project') props = { status: 'next', projectId: sel.id };
+        else if (sel.id === 'inbox') props = { status: 'inbox' };
+        else if (sel.id === 'today') props = { status: 'next', startTime: dayOffset(0) };
+        else if (sel.id === 'upcoming') props = { status: 'next', startTime: dayOffset(1) };
+        else if (sel.id === 'someday') props = { status: 'someday' };
+        void useTaskStore.getState().addTask(title, props);
+        setText('');
+    };
+    return (
+        <input
+            className="mb-6 w-full rounded-md border border-black/10 bg-transparent px-3 py-2 text-sm outline-none dark:border-white/20"
+            placeholder="New To-Do"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+        />
     );
 }
