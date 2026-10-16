@@ -16,6 +16,8 @@ export interface Project {
     state: "active" | "completed" | "archived";
     deletedAt: string | null;
     order: number;
+    /** Ordered section titles. Optional for existing Still backups. */
+    sections?: string[];
 }
 export interface Task {
     id: string;
@@ -127,6 +129,7 @@ export function newProject(title = ""): Project {
         state: "active",
         deletedAt: null,
         order: Date.now(),
+        sections: [],
     };
 }
 export function seed(today = localDate()): Workspace {
@@ -263,6 +266,41 @@ export function complete(
     }
     return n;
 }
+/** Reorder a visible list, preserving every task outside that view.
+ * Project drops may also move a task to a different named section.
+ * The view must be checked for allowed drop targets by the caller. */
+export function moveTask(
+    w: Workspace,
+    visible: Task[],
+    movedId: string,
+    targetId: string | null,
+    placement: "before" | "after",
+    section: string | null = null,
+): Workspace {
+    const ids = visible.map((t) => t.id);
+    if (!ids.includes(movedId) || (targetId && !ids.includes(targetId))) return w;
+    const reordered = ids.filter((id) => id !== movedId);
+    const targetIndex = targetId ? reordered.indexOf(targetId) : reordered.length;
+    const insertAt = targetId
+        ? targetIndex + (placement === "after" ? 1 : 0)
+        : reordered.length;
+    reordered.splice(insertAt, 0, movedId);
+    const visibleIds = new Set(ids);
+    const orderedIds = [
+        ...reordered,
+        ...w.tasks.filter((t) => !visibleIds.has(t.id)).sort((a, b) => a.order - b.order).map((t) => t.id),
+    ];
+    const orderById = new Map(orderedIds.map((id, index) => [id, index]));
+    return {
+        ...w,
+        tasks: w.tasks.map((t) => ({
+            ...t,
+            order: orderById.get(t.id) ?? t.order,
+            heading: t.id === movedId && section !== null ? section : t.heading,
+        })),
+    };
+}
+
 export function parseQuick(text: string, today = localDate()) {
     let scheduled: string | null = null,
         priority: Task["priority"] = "none";
@@ -339,6 +377,15 @@ export function validate(raw: unknown): Workspace {
         if (
             !str(p.notes) ||
             !str(p.doneMeans) ||
+            (p.sections !== undefined && (
+                !Array.isArray(p.sections) ||
+                p.sections.length > 200 ||
+                !p.sections.every((name) =>
+                    typeof name === "string" && name.length <= 80 &&
+                    name.trim() === name && !!name &&
+                    p.sections!.filter((s) => s === name).length === 1
+                )
+            )) ||
             !date(p.deadline) ||
             !timestamp(p.deletedAt) ||
             !["active", "completed", "archived"].includes(p.state) ||

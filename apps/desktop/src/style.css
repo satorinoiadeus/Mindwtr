@@ -287,3 +287,69 @@ code { font-size: 11px; overflow-wrap: anywhere; }
     html { scroll-behavior: auto; }
     *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Still 0.2.2 · Sections and tactile sorting. No extra UI framework. */
+.project-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    min-height: 45px; margin: 20px -7px 0; padding: 4px 9px;
+    border-radius: 10px; transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+.project-section-header .group-title {
+    margin: 0; color: var(--text); font-size: 13px; letter-spacing: -.01em;
+}
+.project-section-header:first-of-type { margin-top: 12px; }
+.project-section-header.drop-section { background: var(--tint-soft); box-shadow: inset 0 -2px var(--accent); }
+.section-add-task {
+    display: grid; place-items: center; width: 32px; height: 32px;
+    border: 0; border-radius: 8px; background: transparent;
+    color: var(--muted); font-size: 18px; opacity: .7;
+}
+.project-section-header:hover .section-add-task,
+.project-section-header:focus-within .section-add-task { opacity: 1; color: var(--accent); background: var(--tint-soft); }
+.section-create { margin-top: 15px; }
+.add-section {
+    display: inline-flex; align-items: center; gap: 9px;
+    min-height: 40px; padding: 8px 11px; border: 1px dashed var(--line-strong);
+    border-radius: 10px; background: transparent; color: var(--muted);
+    font-size: 15px; transition: background-color 160ms ease, border-color 160ms ease;
+}
+.add-section span { font-size: 12px; font-weight: 550; }
+.add-section:hover { background: var(--tint-soft); border-color: var(--accent); color: var(--accent); }
+.section-create-form { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; padding: 8px 0; }
+.section-create-form input:not([type="checkbox"]) { flex: 1 1 160px; margin: 0; min-height: 42px; }
+.section-create-form .secondary { min-height: 42px; }
+.task-row { position: relative; transition: background-color 140ms ease, opacity 160ms ease, box-shadow 180ms ease; }
+.drag-handle {
+    display: grid; place-items: center; flex: none;
+    width: 21px; height: 30px; margin: -2px -8px -2px -7px;
+    padding: 0; border: 0; border-radius: 7px;
+    background: transparent; color: var(--muted); font-size: 18px;
+    cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+    opacity: .28; transition: opacity 140ms ease, color 140ms ease, background-color 140ms ease;
+}
+.task-row:hover .drag-handle, .task-row:focus-within .drag-handle { opacity: .8; }
+.drag-handle:hover { background: var(--tint); color: var(--accent); opacity: 1 !important; }
+.drag-handle:active { cursor: grabbing; }
+.task-row.drag-source { opacity: .24; }
+.task-row.drop-before::before, .task-row.drop-after::after {
+    content: ""; position: absolute; left: 9px; right: 9px; height: 3px;
+    border-radius: 8px; background: var(--accent); box-shadow: 0 0 0 2px var(--tint-soft);
+    pointer-events: none; z-index: 3;
+}
+.task-row.drop-before::before { top: -2px; }
+.task-row.drop-after::after { bottom: -2px; }
+.drag-ghost {
+    opacity: .94; background: var(--surface) !important;
+    border: 1px solid var(--line-strong) !important; border-radius: 12px !important;
+    box-shadow: 0 18px 48px #152c2152, 0 4px 12px #152c211c;
+    will-change: transform; contain: layout style;
+}
+.is-sorting, .is-sorting * { cursor: grabbing !important; user-select: none !important; -webkit-user-select: none !important; }
+@media (hover: none), (max-width: 700px) {
+    .drag-handle { width: 27px; min-height: 38px; margin-left: -6px; margin-right: -8px; opacity: .7; }
+    .project-section-header { margin-top: 18px; }
+    .section-add-task { opacity: 1; min-width: 40px; min-height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .task-row, .drag-handle, .project-section-header, .add-section { transition: none !important; }
+}

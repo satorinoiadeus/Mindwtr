@@ -13,6 +13,7 @@ import {
     parseQuick,
     validDate,
     addDays,
+    moveTask,
 } from "./domain";
 import { BrowserStore } from "./storage";
 test("seed validates and survives JSON round trip", () => {
@@ -228,4 +229,34 @@ test("storage failure rejects without claiming a saved workspace", async () => {
     fail = true;
     await assert.rejects(() => s.save(after), /Disk full/);
     assert.deepEqual(await new BrowserStore().load(), before);
+});
+
+test("sections survive round trips, including empty sections and older backups", () => {
+    const w = blank();
+    const p = newProject("Book");
+    w.projects = [p];
+    p.sections = ["Outline", "Draft", "Review"];
+    assert.deepEqual(validate(JSON.parse(JSON.stringify(w))).projects[0].sections, p.sections);
+    delete p.sections;
+    assert.equal(validate(w).projects[0].sections, undefined);
+    p.sections = ["Outline", "Outline"];
+    assert.throws(() => validate(w));
+    p.sections = ["   "];
+    assert.throws(() => validate(w));
+});
+test("drag ordering updates task section without losing unrelated tasks", () => {
+    const w = blank(), p = newProject("Book");
+    p.sections = ["Draft", "Review"];
+    w.projects = [p];
+    const a = { ...newTask("First"), projectId: p.id, heading: "Draft", order: 1 };
+    const b = { ...newTask("Second"), projectId: p.id, heading: "Review", order: 2 };
+    const unrelated = { ...newTask("Elsewhere"), order: 3 };
+    w.tasks = [a, b, unrelated];
+    const moved = moveTask(w, [a, b], a.id, b.id, "after", "Review");
+    assert.equal(moved.tasks[0].heading, "Review");
+    assert.ok(moved.tasks[0].order > moved.tasks[1].order);
+    assert.equal(moved.tasks[2].title, "Elsewhere");
+    assert.equal(w.tasks[0].heading, "Draft", "Original workspace remains immutable");
+    assert.deepEqual(validate(moved), moved);
+    assert.equal(moveTask(w, [a, b], a.id, "unknown", "after"), w);
 });
