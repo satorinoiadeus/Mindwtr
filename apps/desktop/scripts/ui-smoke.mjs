@@ -103,7 +103,10 @@ w.innerHeight = 844;
 w.document.querySelector('[aria-label="Open navigation"]').click();
 await pause();
 assert.ok(w.document.querySelector("aside.open"));
-await click("New area");
+const addAreaButton = w.document.querySelector('[aria-label="Add area"]');
+assert.ok(addAreaButton, "Drawer offers Add area");
+addAreaButton.click();
+await pause();
 assert.ok(
     !w.document.querySelector("aside.open"),
     "Drawer closes before creating an area",
@@ -113,7 +116,7 @@ fill(dialog.querySelector("input"), "Mobile life");
 await pause();
 await click("Save area");
 assert.equal(w.document.querySelector("main h1").textContent, "Mobile life");
-await click("New project");
+await click("Add project to Mobile life");
 dialog = w.document.querySelector("[role=dialog]");
 fill(dialog.querySelector("input"), "Mobile project");
 await pause();
@@ -139,6 +142,7 @@ assert.equal(
     mobileProject.id,
 );
 assert.match(w.document.querySelector("main").textContent, /My mobile action/);
+assert.ok(w.document.querySelector('[aria-label="Drag to reorder My mobile action"]'), "Touch drag handle available");
 console.log(
     "UI smoke passed: onboarding, capture, Trash, restore, recurrence, Undo, theme; mobile drawer, area → project → task creation and saved relationships.",
 );
