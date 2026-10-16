@@ -26,14 +26,29 @@ import {
 } from "./storage";
 import "./style.css";
 const navs = [
-    ["inbox", "Inbox", "▣"],
-    ["today", "Today", "☀"],
-    ["upcoming", "Upcoming", "▦"],
-    ["anytime", "Anytime", "◇"],
-    ["someday", "Someday", "◷"],
-    ["logbook", "Logbook", "✓"],
-    ["trash", "Trash", "⌫"],
+    ["inbox", "Inbox", "inbox"],
+    ["today", "Today", "sun"],
+    ["upcoming", "Upcoming", "calendar"],
+    ["anytime", "Anytime", "layers"],
+    ["someday", "Someday", "cloud"],
+    ["logbook", "Logbook", "check"],
+    ["trash", "Trash", "trash"],
 ] as const;
+
+// A tiny native SVG set keeps the interface crisp without an icon dependency.
+function NavIcon({ name }: { name: (typeof navs)[number][2] | "search" }) {
+    const paths: Record<string, React.ReactNode> = {
+        inbox: <><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 13h5l2 3h4l2-3h5"/></>,
+        sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></>,
+        calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18"/></>,
+        layers: <><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></>,
+        cloud: <><path d="M7 18h11a4 4 0 0 0 .2-8 6.5 6.5 0 0 0-12.4 1.4A3.4 3.4 0 0 0 7 18Z"/></>,
+        check: <><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></>,
+        trash: <><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></>,
+        search: <><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></>,
+    };
+    return <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
+}
 function labelDate(s: string | null) {
     if (!s) return "";
     const [y, m, d] = s.split("-").map(Number);
@@ -360,7 +375,7 @@ function App() {
                     <span className="brand-label">YOUR QUIET SPACE</span>
                 </div>
                 <button className="search" onClick={() => go("search")}>
-                    <span>⌕ &nbsp; Search</span>
+                    <span><NavIcon name="search" /> Search</span>
                     <kbd>Ctrl K</kbd>
                 </button>
                 <nav>
@@ -369,8 +384,9 @@ function App() {
                             key={v}
                             onClick={() => go(v)}
                             className={view === v ? "selected" : ""}
+                            aria-current={view === v ? "page" : undefined}
                         >
-                            <span className={"nav-icon " + v}>{icon}</span>
+                            <span className={"nav-icon " + v}><NavIcon name={icon} /></span>
                             {t}
                             <span className="count">{navCounts[v] || ""}</span>
                         </button>
@@ -500,7 +516,7 @@ function App() {
                         </button>
                     </div>
                 )}
-                <header>
+                <header key={view}>
                     <div className="eyebrow">MAKE ROOM FOR WHAT MATTERS</div>
                     <div className="heading-line">
                         <h1>{title}</h1>
@@ -701,7 +717,7 @@ function App() {
                         })}
                     </section>
                 )}
-                <section className="task-section">
+                <section className="task-section" key={view}>
                     <div className="list-label">
                         <span>
                             {view === "today"
