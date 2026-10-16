@@ -2,7 +2,7 @@ name: Build Osh Coffee Clash Flame
 on:
   push:
     branches: [osh-coffee-flame]
-    paths: ['osh-flame/**', '.github/workflows/build-osh-coffee-flame.yml']
+    paths: ['osh-flame-v31/**', '.github/workflows/build-osh-coffee-flame.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -16,18 +16,20 @@ jobs:
         with: {distribution: temurin, java-version: '17'}
       - uses: subosito/flutter-action@v2
         with: {channel: stable, cache: true}
-      - name: Restore source correctly
+      - name: Restore v3.1 source
         shell: bash
         run: |
           set -euo pipefail
           mkdir game
-          : > /tmp/osh.zip
-          for p in $(find osh-flame -maxdepth 1 -name 'source.part*.b64' | sort); do base64 -d "$p" >> /tmp/osh.zip; done
+          cat $(find osh-flame-v31 -maxdepth 1 -name 'source.part*.b64' | sort) | base64 -d > /tmp/osh.zip
           unzip -t /tmp/osh.zip >/dev/null
           unzip -q /tmp/osh.zip -d game
           test -f game/lib/main.dart
-          sed -i 's#tree/fangyuan-fighter#releases#g' game/lib/main.dart
-          sed -i 's/Colors.redAccent.withValues(alpha:.3)/Colors.redAccent.withAlpha(77)/g' game/lib/main.dart
+          test -f game/pubspec.yaml
+          test -f game/assets/images/fighters/fang_yuan.webp
+          test -f game/assets/images/fighters/genghis_khan.webp
+          test -f game/assets/images/fighters/arcen_markaryan.webp
+          test -f game/assets/images/stage/osh_arena.jpg
       - name: Generate Android shell
         working-directory: game
         run: flutter create --platforms=android --project-name osh_coffee_clash --org com.oshcoffee .
@@ -36,7 +38,7 @@ jobs:
       - name: Analyze
         working-directory: game
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
-      - name: Boot smoke test
+      - name: Widget boot smoke test
         working-directory: game
         run: flutter test test/smoke_test.dart
       - name: Build APK
@@ -46,9 +48,12 @@ jobs:
         run: |
           test -s game/build/app/outputs/flutter-apk/app-release.apk
           unzip -t game/build/app/outputs/flutter-apk/app-release.apk >/dev/null
-          cp game/build/app/outputs/flutter-apk/app-release.apk OshCoffeeClash-Flame-v3.apk
+          cp game/build/app/outputs/flutter-apk/app-release.apk OshCoffeeClash-Flame-v3.1.apk
       - uses: actions/upload-artifact@v4
-        with: {name: OshCoffeeClash-Flame-v3-Android, path: OshCoffeeClash-Flame-v3.apk, if-no-files-found: error}
+        with:
+          name: OshCoffeeClash-Flame-v3.1-Android
+          path: OshCoffeeClash-Flame-v3.1.apk
+          if-no-files-found: error
 
   windows:
     runs-on: windows-latest
@@ -56,19 +61,26 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with: {channel: stable, cache: true}
-      - name: Restore source correctly
+      - name: Restore v3.1 source
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force game | Out-Null
-          $parts = Get-ChildItem 'osh-flame/source.part*.b64' | Sort-Object Name
+          $parts = Get-ChildItem 'osh-flame-v31/source.part*.b64' | Sort-Object Name
+          if($parts.Count -ne 10){throw "Expected 10 source chunks, got $($parts.Count)"}
           $zip = "$env:RUNNER_TEMP\osh.zip"
           $stream = [IO.File]::Open($zip,[IO.FileMode]::Create,[IO.FileAccess]::Write)
-          try { foreach($part in $parts){ $b=[Convert]::FromBase64String((Get-Content $part.FullName -Raw)); $stream.Write($b,0,$b.Length) } } finally { $stream.Dispose() }
+          try {
+            foreach($part in $parts){
+              $b=[Convert]::FromBase64String((Get-Content $part.FullName -Raw))
+              $stream.Write($b,0,$b.Length)
+            }
+          } finally { $stream.Dispose() }
           Expand-Archive $zip game -Force
           if(!(Test-Path game/lib/main.dart)){throw 'main.dart missing'}
-          $m=Get-Content game/lib/main.dart -Raw
-          $m=$m.Replace('tree/fangyuan-fighter','releases').Replace('Colors.redAccent.withValues(alpha:.3)','Colors.redAccent.withAlpha(77)')
-          Set-Content game/lib/main.dart $m -NoNewline
+          if(!(Test-Path game/assets/images/fighters/fang_yuan.webp)){throw 'Fang Yuan sprite sheet missing'}
+          if(!(Test-Path game/assets/images/fighters/genghis_khan.webp)){throw 'Genghis Khan sprite sheet missing'}
+          if(!(Test-Path game/assets/images/fighters/arcen_markaryan.webp)){throw 'Arcen Markaryan sprite sheet missing'}
+          if(!(Test-Path game/assets/images/stage/osh_arena.jpg)){throw 'Osh Arena missing'}
       - name: Generate Windows shell
         working-directory: game
         shell: pwsh
@@ -80,7 +92,7 @@ jobs:
       - name: Analyze
         working-directory: game
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
-      - name: Boot smoke test
+      - name: Widget boot smoke test
         working-directory: game
         run: flutter test test/smoke_test.dart
       - name: Build Windows
@@ -89,29 +101,37 @@ jobs:
       - name: Real 8-second launch test
         shell: pwsh
         run: |
-          $rel=Get-ChildItem game/build/windows -Directory -Recurse|Where-Object Name -eq 'Release'|Select-Object -First 1
+          $rel=Get-ChildItem game/build/windows -Directory -Recurse | Where-Object Name -eq 'Release' | Select-Object -First 1
           if(!$rel){throw 'Release folder missing'}
-          $exe=Get-ChildItem $rel.FullName -Filter '*.exe'|Select-Object -First 1
+          $exe=Get-ChildItem $rel.FullName -Filter '*.exe' | Select-Object -First 1
           if(!$exe){throw 'EXE missing'}
           $p=Start-Process $exe.FullName -WorkingDirectory $rel.FullName -PassThru
-          Start-Sleep 8; $p.Refresh()
+          Start-Sleep 8
+          $p.Refresh()
           if($p.HasExited){throw "Startup crash: $($p.ExitCode)"}
           Stop-Process $p.Id -Force
           Write-Host 'OSH_FLAME_BOOT_OK'
-          Compress-Archive "$($rel.FullName)\*" OshCoffeeClash-Flame-v3-Windows.zip -Force
+          Compress-Archive "$($rel.FullName)\*" OshCoffeeClash-Flame-v3.1-Windows.zip -Force
       - uses: actions/upload-artifact@v4
-        with: {name: OshCoffeeClash-Flame-v3-Windows, path: OshCoffeeClash-Flame-v3-Windows.zip, if-no-files-found: error}
+        with:
+          name: OshCoffeeClash-Flame-v3.1-Windows
+          path: OshCoffeeClash-Flame-v3.1-Windows.zip
+          if-no-files-found: error
 
   publish:
     needs: [android, windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
-        with: {pattern: 'OshCoffeeClash-Flame-v3-*', path: release, merge-multiple: true}
-      - name: Publish/update latest release
-        env: {GH_TOKEN: '${{ github.token }}'}
+        with:
+          pattern: 'OshCoffeeClash-Flame-v3.1-*'
+          path: release
+          merge-multiple: true
+      - name: Publish/update stable latest release
+        env:
+          GH_TOKEN: '${{ github.token }}'
         run: |
           TAG=osh-coffee-clash-latest
-          gh release view "$TAG" --repo '${{ github.repository }}' >/dev/null 2>&1 || gh release create "$TAG" --repo '${{ github.repository }}' --title 'Osh Coffee Clash — Latest' --notes 'Latest tested Flame/Flutter build.' --target '${{ github.sha }}'
-          gh release upload "$TAG" release/OshCoffeeClash-Flame-v3.apk release/OshCoffeeClash-Flame-v3-Windows.zip --repo '${{ github.repository }}' --clobber
+          gh release view "$TAG" --repo '${{ github.repository }}' >/dev/null 2>&1 || gh release create "$TAG" --repo '${{ github.repository }}' --title 'Osh Coffee Clash — Latest' --notes 'Latest launch-tested Flame/Flutter build using the approved fighter art.' --target '${{ github.sha }}'
+          gh release upload "$TAG" release/OshCoffeeClash-Flame-v3.1.apk release/OshCoffeeClash-Flame-v3.1-Windows.zip --repo '${{ github.repository }}' --clobber
           gh release edit "$TAG" --repo '${{ github.repository }}' --target '${{ github.sha }}'
