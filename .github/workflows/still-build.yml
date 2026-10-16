@@ -2,7 +2,7 @@ name: Still APK and Windows EXE
 on:
   workflow_dispatch:
   push:
-    branches: [main, still-rebuild]
+    branches: [main, still-rebuild, "experiment/**"]
   pull_request:
     branches: [main]
 permissions:
@@ -64,12 +64,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      # GitHub's Ubuntu runner already provides Android SDK command-line tools.
-      # setup-android@v3 tries to install the obsolete 'tools' package on newer runners.
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses >/dev/null || true
-      - run: |
-          sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0' 'ndk;29.0.13846066'
+      - name: Install Android SDK components
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0' 'ndk;29.0.13846066'
           echo "NDK_HOME=$ANDROID_HOME/ndk/29.0.13846066" >> "$GITHUB_ENV"
       - uses: Swatinem/rust-cache@v2
         with:

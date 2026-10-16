@@ -1,5 +1,5 @@
 import { sortAreasForOrderDisplay } from "@still/core/area-ordering";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
     blank,
@@ -12,6 +12,7 @@ import {
     complete,
     matches,
     merge,
+    moveTask,
     type Task,
     type Project,
     type Workspace,
@@ -26,14 +27,34 @@ import {
 } from "./storage";
 import "./style.css";
 const navs = [
-    ["inbox", "Inbox", "▣"],
-    ["today", "Today", "☀"],
-    ["upcoming", "Upcoming", "▦"],
-    ["anytime", "Anytime", "◇"],
-    ["someday", "Someday", "◷"],
-    ["logbook", "Logbook", "✓"],
-    ["trash", "Trash", "⌫"],
+    ["inbox", "Inbox", "inbox"],
+    ["today", "Today", "sun"],
+    ["upcoming", "Upcoming", "calendar"],
+    ["anytime", "Anytime", "layers"],
+    ["someday", "Someday", "cloud"],
+    ["logbook", "Logbook", "check"],
+    ["trash", "Trash", "trash"],
 ] as const;
+
+// A tiny native SVG set keeps the interface crisp without an icon dependency.
+function NavIcon({ name }: { name: (typeof navs)[number][2] | "search" }) {
+    const paths: Record<string, React.ReactNode> = {
+        inbox: <><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 13h5l2 3h4l2-3h5"/></>,
+        sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></>,
+        calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18"/></>,
+        layers: <><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></>,
+        cloud: <><path d="M7 18h11a4 4 0 0 0 .2-8 6.5 6.5 0 0 0-12.4 1.4A3.4 3.4 0 0 0 7 18Z"/></>,
+        check: <><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></>,
+        trash: <><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></>,
+        search: <><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></>,
+    };
+    return <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
+}
+type DropSpot = {
+    taskId: string | null;
+    placement: "before" | "after";
+    section: string | null;
+};
 function labelDate(s: string | null) {
     if (!s) return "";
     const [y, m, d] = s.split("-").map(Number);
@@ -79,10 +100,39 @@ function App() {
         [incoming, setIncoming] = useState<Workspace | null>(null),
         [importWarnings, setImportWarnings] = useState<string[]>([]),
         [undo, setUndo] = useState<Workspace | null>(null),
-        [message, setMessage] = useState("");
+        [message, setMessage] = useState(""),
+        [addingSection, setAddingSection] = useState(false),
+        [sectionDraft, setSectionDraft] = useState(""),
+        [draggedId, setDraggedId] = useState<string | null>(null),
+        [dropSpot, setDropSpot] = useState<DropSpot | null>(null);
     const locked = useRef(false),
         current = useRef(w);
     current.current = w;
+    const dragCleanup = useRef<(() => void) | null>(null);
+    const rowPositions = useRef(new Map<string, DOMRect>());
+    const previousRowView = useRef<View | null>(null);
+    // FLIP: animate actual list movement, not a simulated sorting spinner.
+    useLayoutEffect(() => {
+        const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        const next = new Map<string, DOMRect>();
+        document.querySelectorAll<HTMLElement>("[data-task-id]").forEach((row) => {
+            const id = row.dataset.taskId;
+            if (!id) return;
+            const rect = row.getBoundingClientRect();
+            next.set(id, rect);
+            const before = rowPositions.current.get(id);
+            if (before && previousRowView.current === view && !reduced &&
+                typeof row.animate === "function" && Math.abs(before.top - rect.top) > 2) {
+                row.animate([
+                    { transform: `translate3d(0, ${before.top - rect.top}px, 0)` },
+                    { transform: "translate3d(0, 0, 0)" },
+                ], { duration: 280, easing: "cubic-bezier(.22, 1, .36, 1)" });
+            }
+        });
+        rowPositions.current = next;
+        previousRowView.current = view;
+    }, [w, view]);
+    useEffect(() => () => dragCleanup.current?.(), []);
     useEffect(() => {
         let active = true;
         (async () => {
@@ -148,9 +198,12 @@ function App() {
         setView(v);
         setMenu(false);
     }
-    function addTask() {
+    function addTask(section = "") {
         let t = newTask();
-        if (view.startsWith("project:")) t.projectId = view.slice(8);
+        if (view.startsWith("project:")) {
+            t.projectId = view.slice(8);
+            t.heading = section;
+        }
         if (view.startsWith("area:")) t.areaId = view.slice(5);
         if (view === "today") t.scheduled = localDate();
         if (view === "someday") t.someday = true;
@@ -218,6 +271,44 @@ function App() {
             ),
         [w, todayKey],
     );
+    // Derived lists are stable while only dialogs, toasts or navigation chrome change.
+    // Large workspaces no longer re-filter and re-sort on every unrelated render.
+    const tasks = useMemo<Task[]>(
+        () => w
+            ? w.tasks
+                  .filter((t) => matches(w, t, view, todayKey, query))
+                  .sort((a, b) =>
+                      view === "upcoming"
+                          ? (a.scheduled ?? "").localeCompare(b.scheduled ?? "") ||
+                            a.order - b.order
+                          : a.order - b.order,
+                  )
+            : [],
+        [w, view, todayKey, query],
+    );
+    const activeProjects = useMemo<Project[]>(
+        () => w
+            ? w.projects
+                  .filter((p) => !p.deletedAt && p.state === "active")
+                  .sort((a, b) => a.order - b.order)
+            : [],
+        [w],
+    );
+    const shownProjects = useMemo<Project[]>(
+        () => w
+            ? w.projects.filter((p) =>
+                  view === "trash"
+                      ? !!p.deletedAt
+                      : view === "logbook"
+                        ? !p.deletedAt && p.state !== "active"
+                        : view.startsWith("area:")
+                          ? !p.deletedAt && p.state === "active" &&
+                            p.areaId === view.slice(5)
+                          : false,
+              )
+            : [],
+        [w, view],
+    );
     if (!loaded)
         return (
             <div className="start">
@@ -273,26 +364,23 @@ function App() {
             p?.title ??
             navs.find((n) => n[0] === view)?.[1] ??
             "Search";
-    const tasks = w.tasks
-        .filter((t) => matches(w, t, view, localDate(), query))
-        .sort((a, b) =>
-            view === "upcoming"
-                ? (a.scheduled ?? "").localeCompare(b.scheduled ?? "") ||
-                  a.order - b.order
-                : a.order - b.order,
-        );
-    const shownProjects = w.projects.filter((p) =>
-        view === "trash"
-            ? !!p.deletedAt
-            : view === "logbook"
-              ? !p.deletedAt && p.state !== "active"
-              : area
-                ? !p.deletedAt && p.state === "active" && p.areaId === area.id
-                : false,
-    );
-    const activeProjects = w.projects
-        .filter((p) => !p.deletedAt && p.state === "active")
-        .sort((a, b) => a.order - b.order);
+    const sectionNames = p ? [...new Set([
+        ...(p.sections ?? []),
+        ...tasks.map((t) => t.heading).filter(Boolean),
+    ])] : [];
+    const projectTaskOrder = p ? [
+        ...tasks.filter((t) => !t.heading),
+        ...sectionNames.flatMap((name) => tasks.filter((t) => t.heading === name)),
+    ] : tasks;
+    type DisplayRow = { kind: "task"; task: Task; index: number } | { kind: "section"; title: string };
+    const rows: DisplayRow[] = p ? [
+        ...(sectionNames.length ? [{ kind: "section" as const, title: "" }] : []),
+        ...projectTaskOrder.filter((t) => !t.heading).map((task) => ({ kind: "task" as const, task, index: projectTaskOrder.indexOf(task) })),
+        ...sectionNames.flatMap((name) => [
+            { kind: "section" as const, title: name },
+            ...projectTaskOrder.filter((t) => t.heading === name).map((task) => ({ kind: "task" as const, task, index: projectTaskOrder.indexOf(task) })),
+        ]),
+    ] : tasks.map((task, index) => ({ kind: "task" as const, task, index }));
     async function updateTask(t: Task) {
         if (!w) return;
         const next = {
@@ -316,27 +404,104 @@ function App() {
             if (!w.projects.some((x) => x.id === p.id)) go(`project:${p.id}`);
         }
     }
+    function startDrag(e: React.PointerEvent<HTMLButtonElement>, id: string) {
+        if (busy || e.button !== 0 || !w || ["trash", "logbook", "search"].includes(view)) return;
+        const origin = e.currentTarget.closest<HTMLElement>("[data-task-id]");
+        if (!origin) return;
+        e.preventDefault();
+        dragCleanup.current?.();
+        const startX = e.clientX, startY = e.clientY;
+        const rect = origin.getBoundingClientRect();
+        let ghost: HTMLElement | null = null;
+        let active = false;
+        let destination: DropSpot | null = null;
+        const cleanup = () => {
+            window.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointerup", onUp);
+            window.removeEventListener("pointercancel", onCancel);
+            ghost?.remove();
+            document.body.classList.remove("is-sorting");
+            setDraggedId(null);
+            setDropSpot(null);
+            dragCleanup.current = null;
+        };
+        const onMove = (ev: PointerEvent) => {
+            if (ev.pointerId !== e.pointerId) return;
+            if (!active && Math.hypot(ev.clientX - startX, ev.clientY - startY) < 6) return;
+            if (!active) {
+                active = true;
+                setDraggedId(id);
+                document.body.classList.add("is-sorting");
+                ghost = origin.cloneNode(true) as HTMLElement;
+                ghost.removeAttribute("data-task-id");
+                ghost.classList.add("drag-ghost");
+                Object.assign(ghost.style, {
+                    position: "fixed", pointerEvents: "none", zIndex: "9999",
+                    left: `${rect.left}px`, top: `${rect.top}px`,
+                    width: `${rect.width}px`, margin: "0",
+                });
+                document.body.appendChild(ghost);
+            }
+            ev.preventDefault();
+            if (ghost) ghost.style.transform = `translate3d(${ev.clientX - startX}px, ${ev.clientY - startY}px, 0) rotate(-.8deg)`;
+            const at = document.elementFromPoint(ev.clientX, ev.clientY)?.closest<HTMLElement>("[data-task-id], [data-drop-section]");
+            let next: DropSpot | null = null;
+            if (at?.hasAttribute("data-task-id")) {
+                const targetId = at.dataset.taskId ?? null;
+                if (targetId && targetId !== id) {
+                    const box = at.getBoundingClientRect();
+                    const placement = ev.clientY < box.top + box.height / 2 ? "before" : "after";
+                    // Upcoming groups must retain their calendar date ordering.
+                    const dragged = w.tasks.find((t) => t.id === id);
+                    const target = w.tasks.find((t) => t.id === targetId);
+                    if (view !== "upcoming" || dragged?.scheduled === target?.scheduled) {
+                        next = { taskId: targetId, placement, section: view.startsWith("project:") ? at.dataset.heading ?? "" : null };
+                    }
+                }
+            } else if (at?.hasAttribute("data-drop-section") && view.startsWith("project:")) {
+                next = { taskId: null, placement: "after", section: at.dataset.dropSection ?? "" };
+            }
+            destination = next;
+            setDropSpot((old) => old?.taskId === next?.taskId && old?.placement === next?.placement && old?.section === next?.section ? old : next);
+            if (ev.clientY < 72) window.scrollBy({ top: -12, behavior: "auto" });
+            else if (ev.clientY > window.innerHeight - 72) window.scrollBy({ top: 12, behavior: "auto" });
+        };
+        const onUp = (ev: PointerEvent) => {
+            if (ev.pointerId !== e.pointerId) return;
+            const drop = destination;
+            cleanup();
+            if (!active || !drop || !w) return;
+            const shown = view.startsWith("project:") ? projectTaskOrder : tasks;
+            void commit(moveTask(w, shown, id, drop.taskId, drop.placement, drop.section), "Order updated");
+        };
+        const onCancel = (ev: PointerEvent) => { if (ev.pointerId === e.pointerId) cleanup(); };
+        window.addEventListener("pointermove", onMove, { passive: false });
+        window.addEventListener("pointerup", onUp);
+        window.addEventListener("pointercancel", onCancel);
+        dragCleanup.current = cleanup;
+    }
+    async function saveSection(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+        if (!p || !w) return;
+        const name = sectionDraft.trim();
+        const existing = new Set([...(p.sections ?? []), ...w.tasks.filter((t) => t.projectId === p.id).map((t) => t.heading)]);
+        if (!name || name.length > 80 || existing.has(name)) {
+            setError(name && existing.has(name) ? "That section already exists." : "Enter a section name (up to 80 characters).");
+            return;
+        }
+        if (await commit({ ...w, projects: w.projects.map((x) => x.id === p.id ? { ...x, sections: [...(x.sections ?? []), name] } : x) }, "Section added")) {
+            setAddingSection(false);
+            setSectionDraft("");
+        }
+    }
     function reorder(id: string, direction: number) {
         if (!w) return;
-        const i = tasks.findIndex((t) => t.id === id),
-            other = tasks[i + direction];
+        const shown = p ? projectTaskOrder : tasks;
+        const i = shown.findIndex((t) => t.id === id),
+            other = shown[i + direction];
+        if (p && other?.heading !== shown[i]?.heading) return;
         if (!other) return;
-        const ids = tasks.map((t) => t.id);
-        [ids[i], ids[i + direction]] = [ids[i + direction], ids[i]];
-        const ordered = [
-            ...ids,
-            ...w.tasks.filter((t) => !ids.includes(t.id)).map((t) => t.id),
-        ];
-        commit(
-            {
-                ...w,
-                tasks: w.tasks.map((t) => ({
-                    ...t,
-                    order: ordered.indexOf(t.id),
-                })),
-            },
-            "Order updated",
-        );
+        void commit(moveTask(w, shown, id, other.id, direction < 0 ? "before" : "after"), "Order updated");
     }
     function editProject(p: Project) {
         setProject(p);
@@ -360,7 +525,7 @@ function App() {
                     <span className="brand-label">YOUR QUIET SPACE</span>
                 </div>
                 <button className="search" onClick={() => go("search")}>
-                    <span>⌕ &nbsp; Search</span>
+                    <span><NavIcon name="search" /> Search</span>
                     <kbd>Ctrl K</kbd>
                 </button>
                 <nav>
@@ -369,8 +534,9 @@ function App() {
                             key={v}
                             onClick={() => go(v)}
                             className={view === v ? "selected" : ""}
+                            aria-current={view === v ? "page" : undefined}
                         >
-                            <span className={"nav-icon " + v}>{icon}</span>
+                            <span className={"nav-icon " + v}><NavIcon name={icon} /></span>
                             {t}
                             <span className="count">{navCounts[v] || ""}</span>
                         </button>
@@ -715,7 +881,7 @@ function App() {
                             {tasks.length === 1 ? "task" : "tasks"}
                         </span>
                     </div>
-                    {tasks.length === 0 ? (
+                    {tasks.length === 0 && !p ? (
                         <div className="empty">
                             <div className="empty-symbol">◌</div>
                             <h2>
@@ -735,14 +901,26 @@ function App() {
                                       : "Add one clear, doable action."}
                             </p>
                             {!["trash", "logbook", "search"].includes(view) && (
-                                <button className="secondary" onClick={addTask}>
+                                <button className="secondary" onClick={() => addTask()}>
                                     ＋ Add next action
                                 </button>
                             )}
                         </div>
                     ) : (
-                        tasks.map((t, i) => (
-                            <React.Fragment key={t.id}>
+                        rows.map((entry) => {
+                            if (entry.kind === "section") return (
+                                <div
+                                    key={`section:${entry.title}`}
+                                    className={"project-section-header " + (dropSpot?.taskId === null && dropSpot.section === entry.title ? "drop-section" : "")}
+                                    data-drop-section={entry.title}
+                                >
+                                    <h3 className="group-title">{entry.title || "No section"}</h3>
+                                    <button type="button" className="section-add-task" onClick={() => addTask(entry.title)} aria-label={`Add task to ${entry.title || "No section"}`}>＋</button>
+                                </div>
+                            );
+                            const t = entry.task;
+                            const i = entry.index;
+                            return <React.Fragment key={t.id}>
                                 {view === "upcoming" &&
                                     (i === 0 ||
                                         tasks[i - 1].scheduled !==
@@ -751,20 +929,19 @@ function App() {
                                             {labelDate(t.scheduled)}
                                         </h3>
                                     )}
-                                {p &&
-                                    t.heading &&
-                                    (i === 0 ||
-                                        tasks[i - 1].heading !== t.heading) && (
-                                        <h3 className="group-title">
-                                            {t.heading}
-                                        </h3>
-                                    )}
                                 <div
+                                    data-task-id={t.id}
+                                    data-heading={p ? t.heading : undefined}
                                     className={
                                         "task-row " +
-                                        (t.completedAt ? "done" : "")
+                                        (t.completedAt ? "done " : "") +
+                                        (draggedId === t.id ? "drag-source " : "") +
+                                        (dropSpot?.taskId === t.id ? `drop-${dropSpot.placement}` : "")
                                     }
                                 >
+                                    {view !== "trash" && view !== "logbook" && view !== "search" && (
+                                        <button type="button" className="drag-handle" aria-label={`Drag to reorder ${t.title}`} title="Drag to reorder" disabled={busy} onPointerDown={(e) => startDrag(e, t.id)}>⠿</button>
+                                    )}
                                     <button
                                         className={
                                             "check " +
@@ -928,6 +1105,7 @@ function App() {
                                                     disabled={
                                                         busy ||
                                                         i === 0 ||
+                                                        (p && projectTaskOrder[i - 1]?.heading !== t.heading) ||
                                                         (view === "upcoming" &&
                                                             tasks[i - 1]
                                                                 ?.scheduled !==
@@ -944,8 +1122,8 @@ function App() {
                                                     aria-label={`Move ${t.title} down`}
                                                     disabled={
                                                         busy ||
-                                                        i ===
-                                                            tasks.length - 1 ||
+                                                        i === projectTaskOrder.length - 1 ||
+                                                        (p && projectTaskOrder[i + 1]?.heading !== t.heading) ||
                                                         (view === "upcoming" &&
                                                             tasks[i + 1]
                                                                 ?.scheduled !==
@@ -971,12 +1149,25 @@ function App() {
                                         )}
                                     </div>
                                 </div>
-                            </React.Fragment>
-                        ))
+                            </React.Fragment>;
+                        })
+                    )}
+                    {p && (
+                        <div className="section-create">
+                            {addingSection ? (
+                                <form className="section-create-form" onSubmit={saveSection}>
+                                    <input autoFocus aria-label="Section name" maxLength={80} value={sectionDraft} onChange={(e) => setSectionDraft(e.target.value)} placeholder="Section name" />
+                                    <button className="secondary" type="submit" disabled={busy}>Add section</button>
+                                    <button type="button" className="text-button" onClick={() => { setAddingSection(false); setSectionDraft(""); }}>Cancel</button>
+                                </form>
+                            ) : (
+                                <button className="add-section" onClick={() => setAddingSection(true)}>＋ <span>Add section</span></button>
+                            )}
+                        </div>
                     )}
                 </section>
                 {!["trash", "logbook"].includes(view) && (
-                    <button className="add-inline" onClick={addTask}>
+                    <button className="add-inline" onClick={() => addTask()}>
                         ＋ <span>New task</span>
                         <kbd>N</kbd>
                     </button>
@@ -985,7 +1176,7 @@ function App() {
                     One thing at a time is enough.<span>✳</span>
                 </div>
             </main>
-            <button className="fab" onClick={addTask} aria-label="Add task">
+            <button className="fab" onClick={() => addTask()} aria-label="Add task">
                 ＋
             </button>
             {message && (
@@ -1580,7 +1771,11 @@ function TaskForm({
                         value={t.heading}
                         onChange={(e) => change("heading", e.target.value)}
                         placeholder="e.g. First steps"
+                        list="still-section-suggestions"
                     />
+                    <datalist id="still-section-suggestions">
+                        {(w.projects.find((p) => p.id === t.projectId)?.sections ?? []).map((name) => <option key={name} value={name} />)}
+                    </datalist>
                 </label>
             )}
             <div className="form-grid">
