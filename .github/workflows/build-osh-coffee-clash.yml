@@ -23,6 +23,10 @@ jobs:
           mkdir -p meme-fighter/project
           base64 -d meme-fighter/source.zip.b64 > /tmp/osh-coffee-clash.zip
           unzip -o /tmp/osh-coffee-clash.zip -d meme-fighter/project
+          # Godot 4.5 Android export requires ETC2/ASTC mobile texture imports even for this code-drawn game.
+          if ! grep -q '^rendering/textures/vram_compression/import_etc2_astc=true$' meme-fighter/project/project.godot; then
+            printf '\nrendering/textures/vram_compression/import_etc2_astc=true\n' >> meme-fighter/project/project.godot
+          fi
           find meme-fighter/project -maxdepth 2 -type f -print
 
       - name: Set up Java 17
@@ -73,6 +77,13 @@ jobs:
           "$HOME/.local/bin/godot" --headless --path meme-fighter/project --export-debug "Windows Desktop" "$GITHUB_WORKSPACE/dist/OshCoffeeClash.exe" --verbose
           test -s dist/OshCoffeeClash.exe
 
+      - name: Upload Windows EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: OshCoffeeClash-Windows
+          path: dist/OshCoffeeClash.exe
+          if-no-files-found: error
+
       - name: Export Android APK
         env:
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /tmp/debug.keystore
@@ -82,19 +93,12 @@ jobs:
           "$HOME/.local/bin/godot" --headless --path meme-fighter/project --export-debug "Android" "$GITHUB_WORKSPACE/dist/OshCoffeeClash.apk" --verbose
           test -s dist/OshCoffeeClash.apk
 
-      - name: Show binaries
-        run: ls -lh dist
-
-      - name: Upload Windows EXE
-        uses: actions/upload-artifact@v4
-        with:
-          name: OshCoffeeClash-Windows
-          path: dist/OshCoffeeClash.exe
-          if-no-files-found: error
-
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: OshCoffeeClash-Android
           path: dist/OshCoffeeClash.apk
           if-no-files-found: error
+
+      - name: Show binaries
+        run: ls -lh dist
