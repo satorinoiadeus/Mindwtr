@@ -18,15 +18,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Restore game source
+      - name: Restore and upgrade game source
         run: |
           mkdir -p meme-fighter/project
           base64 -d meme-fighter/source.zip.b64 > /tmp/osh-coffee-clash.zip
           unzip -o /tmp/osh-coffee-clash.zip -d meme-fighter/project
+          cp meme-fighter/v2/main.gd meme-fighter/project/main.gd
+          python3 -m pip install --quiet pillow
+          python3 meme-fighter/v2/generate_assets.py
           python3 - <<'PY'
           from pathlib import Path
           p = Path('meme-fighter/project/project.godot')
           s = p.read_text()
+          s = s.replace('config/name="Osh Coffee Clash"', 'config/name="Osh Coffee Clash v2"')
           s = s.replace('\nrendering/textures/vram_compression/import_etc2_astc=true\n', '\n')
           needle = '[rendering]\n'
           if needle not in s:
@@ -35,8 +39,9 @@ jobs:
               s = s.replace(needle, needle + 'textures/vram_compression/import_etc2_astc=true\n', 1)
           p.write_text(s)
           PY
+          test "$(find meme-fighter/project/assets -name '*.png' | wc -l)" -eq 100
           grep -A6 '^\[rendering\]$' meme-fighter/project/project.godot
-          find meme-fighter/project -maxdepth 2 -type f -print
+          echo "Generated asset count: $(find meme-fighter/project/assets -name '*.png' | wc -l)"
 
       - name: Set up Java 17
         uses: actions/setup-java@v5
@@ -74,7 +79,6 @@ jobs:
           export/android/debug_keystore_user = "androiddebugkey"
           export/android/debug_keystore_pass = "android"
           EOF
-          cat "$HOME/.config/godot/editor_settings-4.5.tres"
 
       - name: Import project
         run: |
@@ -83,14 +87,14 @@ jobs:
       - name: Export Windows EXE
         run: |
           mkdir -p dist
-          "$HOME/.local/bin/godot" --headless --path meme-fighter/project --export-debug "Windows Desktop" "$GITHUB_WORKSPACE/dist/OshCoffeeClash.exe" --verbose
-          test -s dist/OshCoffeeClash.exe
+          "$HOME/.local/bin/godot" --headless --path meme-fighter/project --export-debug "Windows Desktop" "$GITHUB_WORKSPACE/dist/OshCoffeeClash-v2.exe" --verbose
+          test -s dist/OshCoffeeClash-v2.exe
 
       - name: Upload Windows EXE
         uses: actions/upload-artifact@v4
         with:
-          name: OshCoffeeClash-Windows
-          path: dist/OshCoffeeClash.exe
+          name: OshCoffeeClash-v2-Windows
+          path: dist/OshCoffeeClash-v2.exe
           if-no-files-found: error
 
       - name: Export Android APK
@@ -99,14 +103,14 @@ jobs:
           GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
-          "$HOME/.local/bin/godot" --headless --path meme-fighter/project --export-debug "Android" "$GITHUB_WORKSPACE/dist/OshCoffeeClash.apk" --verbose
-          test -s dist/OshCoffeeClash.apk
+          "$HOME/.local/bin/godot" --headless --path meme-fighter/project --export-debug "Android" "$GITHUB_WORKSPACE/dist/OshCoffeeClash-v2.apk" --verbose
+          test -s dist/OshCoffeeClash-v2.apk
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: OshCoffeeClash-Android
-          path: dist/OshCoffeeClash.apk
+          name: OshCoffeeClash-v2-Android
+          path: dist/OshCoffeeClash-v2.apk
           if-no-files-found: error
 
       - name: Show binaries
