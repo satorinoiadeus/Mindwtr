@@ -1,4 +1,4 @@
 {
-  "version": "2.0.0",
-  "notes": "Real CC0 steel-string samples, dynamic velocity, realistic per-string choking, arpeggios, and a redesigned responsive interface."
+  "version": "2.0.1",
+  "notes": "Chord switching remapped to QWERT / ASDFG; string keys moved to ZXCVBN and arpeggio to P."
 }
