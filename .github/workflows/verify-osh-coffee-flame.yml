@@ -1,0 +1,73 @@
+name: Verify Osh Coffee Clash Flame
+
+on:
+  push:
+    branches: [osh-coffee-flame]
+    paths:
+      - 'osh-flame/source.part*.b64'
+      - '.github/workflows/verify-osh-coffee-flame.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Restore source
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, glob, pathlib, zipfile
+          fs=sorted(glob.glob('osh-flame/source.part*.b64'))
+          data=''.join(pathlib.Path(p).read_text().strip() for p in fs)
+          raw=base64.b64decode(data)
+          pathlib.Path('source.zip').write_bytes(raw)
+          pathlib.Path('src').mkdir(exist_ok=True)
+          with zipfile.ZipFile('source.zip') as z:
+            bad=z.testzip()
+            if bad: raise SystemExit('CORRUPT ZIP '+bad)
+            z.extractall('src')
+          print('RESTORE_OK',len(fs),len(raw))
+          PY
+          flutter create --project-name osh_coffee_clash --org com.satori --platforms=android game
+          cp -a src/. game/
+          sed -i 's/fangyuan-fighter/osh-coffee-flame/g' game/lib/main.dart || true
+      - name: Run diagnostics
+        id: diag
+        shell: bash
+        run: |
+          set +e
+          cd game
+          flutter pub get > ../diag.log 2>&1
+          PUB=$?
+          flutter test >> ../diag.log 2>&1
+          TEST=$?
+          flutter analyze >> ../diag.log 2>&1
+          ANALYZE=$?
+          cd ..
+          printf 'pub=%s\ntest=%s\nanalyze=%s\n' "$PUB" "$TEST" "$ANALYZE" > osh-flame/ci-result.txt
+          tail -n 180 diag.log >> osh-flame/ci-result.txt
+          echo "pub=$PUB" >> "$GITHUB_OUTPUT"
+          echo "test=$TEST" >> "$GITHUB_OUTPUT"
+          echo "analyze=$ANALYZE" >> "$GITHUB_OUTPUT"
+      - name: Commit diagnostic result
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add osh-flame/ci-result.txt
+          git commit -m 'Update Flame CI diagnostic' || true
+          git push
+      - name: Enforce verification
+        shell: bash
+        run: |
+          test '${{ steps.diag.outputs.pub }}' = '0'
+          test '${{ steps.diag.outputs.test }}' = '0'
+          test '${{ steps.diag.outputs.analyze }}' = '0'
