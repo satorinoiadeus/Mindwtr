@@ -2,9 +2,9 @@ name: Still APK and Windows EXE
 on:
   workflow_dispatch:
   push:
-    branches: [main, still-rebuild]
+    branches: [main, still-rebuild, still-mobile-redesign-v03]
   pull_request:
-    branches: [main]
+    branches: [main, still-rebuild]
 permissions:
   contents: read
 concurrency:
