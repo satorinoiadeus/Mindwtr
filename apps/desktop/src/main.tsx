@@ -233,6 +233,44 @@ function App() {
             ),
         [w, todayKey],
     );
+    // Derived lists are stable while only dialogs, toasts or navigation chrome change.
+    // Large workspaces no longer re-filter and re-sort on every unrelated render.
+    const tasks = useMemo<Task[]>(
+        () => w
+            ? w.tasks
+                  .filter((t) => matches(w, t, view, todayKey, query))
+                  .sort((a, b) =>
+                      view === "upcoming"
+                          ? (a.scheduled ?? "").localeCompare(b.scheduled ?? "") ||
+                            a.order - b.order
+                          : a.order - b.order,
+                  )
+            : [],
+        [w, view, todayKey, query],
+    );
+    const activeProjects = useMemo<Project[]>(
+        () => w
+            ? w.projects
+                  .filter((p) => !p.deletedAt && p.state === "active")
+                  .sort((a, b) => a.order - b.order)
+            : [],
+        [w],
+    );
+    const shownProjects = useMemo<Project[]>(
+        () => w
+            ? w.projects.filter((p) =>
+                  view === "trash"
+                      ? !!p.deletedAt
+                      : view === "logbook"
+                        ? !p.deletedAt && p.state !== "active"
+                        : view.startsWith("area:")
+                          ? !p.deletedAt && p.state === "active" &&
+                            p.areaId === view.slice(5)
+                          : false,
+              )
+            : [],
+        [w, view],
+    );
     if (!loaded)
         return (
             <div className="start">
@@ -288,26 +326,6 @@ function App() {
             p?.title ??
             navs.find((n) => n[0] === view)?.[1] ??
             "Search";
-    const tasks = w.tasks
-        .filter((t) => matches(w, t, view, localDate(), query))
-        .sort((a, b) =>
-            view === "upcoming"
-                ? (a.scheduled ?? "").localeCompare(b.scheduled ?? "") ||
-                  a.order - b.order
-                : a.order - b.order,
-        );
-    const shownProjects = w.projects.filter((p) =>
-        view === "trash"
-            ? !!p.deletedAt
-            : view === "logbook"
-              ? !p.deletedAt && p.state !== "active"
-              : area
-                ? !p.deletedAt && p.state === "active" && p.areaId === area.id
-                : false,
-    );
-    const activeProjects = w.projects
-        .filter((p) => !p.deletedAt && p.state === "active")
-        .sort((a, b) => a.order - b.order);
     async function updateTask(t: Task) {
         if (!w) return;
         const next = {
@@ -338,16 +356,18 @@ function App() {
         if (!other) return;
         const ids = tasks.map((t) => t.id);
         [ids[i], ids[i + direction]] = [ids[i + direction], ids[i]];
+        const shownIds = new Set(ids);
         const ordered = [
             ...ids,
-            ...w.tasks.filter((t) => !ids.includes(t.id)).map((t) => t.id),
+            ...w.tasks.filter((t) => !shownIds.has(t.id)).map((t) => t.id),
         ];
+        const orderById = new Map(ordered.map((taskId, index) => [taskId, index]));
         commit(
             {
                 ...w,
                 tasks: w.tasks.map((t) => ({
                     ...t,
-                    order: ordered.indexOf(t.id),
+                    order: orderById.get(t.id) ?? t.order,
                 })),
             },
             "Order updated",

@@ -9,6 +9,11 @@ w.document.write(
 w.structuredClone = structuredClone;
 w.eval(html.match(/<script>([\s\S]*)<\/script>/)[1]);
 const pause = () => new Promise((r) => setTimeout(r, 200));
+const waitFor = async (predicate, label, timeoutMs = 6000) => {
+    const deadline = Date.now() + timeoutMs;
+    while (!predicate() && Date.now() < deadline) await pause();
+    assert.ok(predicate(), `Timed out waiting for ${label}`);
+};
 const button = (text) =>
     [...w.document.querySelectorAll("button")].find((b) =>
         b.textContent.includes(text),
@@ -112,7 +117,7 @@ dialog = w.document.querySelector("[role=dialog]");
 fill(dialog.querySelector("input"), "Mobile life");
 await pause();
 await click("Save area");
-assert.equal(w.document.querySelector("main h1").textContent, "Mobile life");
+await waitFor(() => w.document.querySelector("main h1")?.textContent === "Mobile life", "area navigation");
 await click("New project");
 dialog = w.document.querySelector("[role=dialog]");
 fill(dialog.querySelector("input"), "Mobile project");
@@ -125,7 +130,7 @@ assert.equal(
     "Project inherits current area",
 );
 await click("Save project");
-assert.equal(w.document.querySelector("main h1").textContent, "Mobile project");
+await waitFor(() => w.document.querySelector("main h1")?.textContent === "Mobile project", "project navigation");
 await click("New task");
 dialog = w.document.querySelector("[role=dialog]");
 fill(dialog.querySelector("input[required]"), "My mobile action");
