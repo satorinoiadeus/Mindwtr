@@ -1,6 +1,0 @@
-.build/
-.swiftpm/
-DerivedData/
-Resources/core-host.js
-*.xcuserstate
-xcuserdata/

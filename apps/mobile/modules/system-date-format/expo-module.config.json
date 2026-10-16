@@ -1,8 +1,0 @@
-{
-  "platforms": ["ios"],
-  "ios": {
-    "podspecPath": "ios/MindwtrSystemDateFormat.podspec",
-    "swiftModuleName": "MindwtrSystemDateFormat",
-    "modules": ["MindwtrSystemDateFormatModule"]
-  }
-}
