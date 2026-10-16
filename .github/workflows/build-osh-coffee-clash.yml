@@ -88,10 +88,14 @@ jobs:
           set -o pipefail
           "$HOME/.local/bin/godot" --headless --path meme-fighter/project --quit-after 10 2>&1 | tee /tmp/osh-runtime.log
           if grep -E "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR: Failed to load script" /tmp/osh-runtime.log; then
-            echo "Runtime smoke test failed"
+            echo "Runtime smoke test failed: Godot reported a script/runtime error"
             exit 1
           fi
-          echo "Runtime smoke test passed"
+          if ! grep -q "OSH_BOOT_OK" /tmp/osh-runtime.log; then
+            echo "Runtime smoke test failed: boot marker never reached"
+            exit 1
+          fi
+          echo "Runtime smoke test passed: OSH_BOOT_OK"
 
       - name: Export Windows EXE
         run: |
