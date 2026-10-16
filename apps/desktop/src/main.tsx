@@ -536,7 +536,7 @@ function App() {
                         </button>
                     </div>
                 )}
-                <header key={view}>
+                <header>
                     <div className="eyebrow">MAKE ROOM FOR WHAT MATTERS</div>
                     <div className="heading-line">
                         <h1>{title}</h1>
@@ -737,7 +737,7 @@ function App() {
                         })}
                     </section>
                 )}
-                <section className="task-section" key={view}>
+                <section className="task-section">
                     <div className="list-label">
                         <span>
                             {view === "today"
