@@ -37,6 +37,18 @@ jobs:
         with:
           packages: 'platform-tools build-tools;35.0.0 platforms;android-35'
 
+      - name: Configure Godot Android paths
+        run: |
+          mkdir -p ~/.config/godot
+          cat > ~/.config/godot/editor_settings-4.tres <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          EOF
+          cat ~/.config/godot/editor_settings-4.tres
+
       - name: Export Windows and Android
         id: export
         uses: firebelley/godot-export@v8.0.0
@@ -44,26 +56,31 @@ jobs:
           godot_executable_download_url: https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_linux.x86_64.zip
           godot_export_templates_download_url: https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz
           relative_project_path: ./meme-fighter/project
-          use_preset_export_path: true
           presets_to_export: Windows Desktop,Android
           export_debug: true
           verbose: true
 
-      - name: Show outputs
-        if: always()
+      - name: Collect binaries
+        env:
+          BUILD_DIR: ${{ steps.export.outputs.build_directory }}
         run: |
-          find meme-fighter/project/build -maxdepth 4 -type f -print 2>/dev/null || true
+          echo "Build directory: $BUILD_DIR"
+          find "$BUILD_DIR" -maxdepth 3 -type f -print
+          mkdir -p dist
+          cp "$BUILD_DIR/Windows Desktop/OshCoffeeClash.exe" dist/OshCoffeeClash.exe
+          cp "$BUILD_DIR/Android/OshCoffeeClash.apk" dist/OshCoffeeClash.apk
+          ls -lh dist
 
       - name: Upload Windows EXE
         uses: actions/upload-artifact@v4
         with:
           name: OshCoffeeClash-Windows
-          path: meme-fighter/project/build/windows/OshCoffeeClash.exe
+          path: dist/OshCoffeeClash.exe
           if-no-files-found: error
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: OshCoffeeClash-Android
-          path: meme-fighter/project/build/android/OshCoffeeClash.apk
+          path: dist/OshCoffeeClash.apk
           if-no-files-found: error
