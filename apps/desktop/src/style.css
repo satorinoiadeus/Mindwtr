@@ -1119,3 +1119,58 @@ body {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* Still mobile redesign: calm, iOS-inspired hierarchy, original visual language. */
+:root { --bg:#f8f8fa; --side:#f4f4f7; --surface:#ffffff; --text:#22232a; --muted:#888a95; --line:#ededf1; --accent:#2679e8; --tint:#eaf2ff; --shadow:0 16px 48px #161d3512; }
+html[data-theme="dark"] { --bg:#15161b; --side:#1b1c22; --surface:#24252c; --text:#f3f4f7; --muted:#a0a2ad; --line:#363741; --accent:#76adff; --tint:#283e61; --shadow:0 16px 48px #0005; }
+.area-add-project {display:inline-flex; align-items:center; gap:10px; border:0; background:transparent; color:var(--accent); padding:12px 0; font-weight:650; font-size:14px;}
+.area-add-icon {font-size:22px; line-height:1;}
+.drag-grip {font-size:21px; color:var(--muted); cursor:grab; user-select:none; padding:0 5px;}
+.task-row[draggable="true"],.project-card[draggable="true"] {cursor:grab;}
+.task-row[draggable="true"]:active,.project-card[draggable="true"]:active {cursor:grabbing;}
+.mobile-bottom-bar {display:none;}
+@media (max-width:700px) {
+  body {background:var(--bg); -webkit-tap-highlight-color:transparent;}
+  .shell > main {padding:14px 19px calc(116px + env(safe-area-inset-bottom)); max-width:100%;}
+  .topline {font-size:12px; margin:0 0 25px; padding:5px 0 12px; color:var(--muted);}
+  .topline .plain {background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:7px 12px; color:var(--accent);}
+  .topline .local-dot {font-size:10px;}
+  header {margin:14px 0 28px;}
+  header h1 {font-size:clamp(36px,10vw,48px); font-weight:750; letter-spacing:-1.8px; line-height:1.12;}
+  header p {font-size:14px; line-height:1.5; color:var(--muted);}
+  .eyebrow {font-size:10px; font-weight:700; letter-spacing:1.2px; color:var(--accent);}
+  .task-section {border-radius:18px; overflow:hidden; background:var(--surface); border:1px solid var(--line); padding:0 14px;}
+  .list-label {padding:17px 2px 10px; color:var(--muted); font-size:10px; font-weight:700;}
+  .task-row {min-height:64px; padding:15px 2px; gap:13px; border-bottom:1px solid var(--line);}
+  .task-title {font-size:16px; font-weight:530; letter-spacing:-.2px;}
+  .check {width:25px; height:25px; flex-shrink:0; border-radius:50%;}
+  .task-meta {font-size:11px; margin-top:5px;}
+  .row-actions .reorder {display:none;}
+  .row-actions .edit-button {font-size:21px; min-width:30px; padding:0;}
+  .drag-grip {font-size:22px; padding:0 2px;}
+  .project-cards {display:grid; grid-template-columns:1fr; gap:12px;}
+  .project-card {border-radius:18px; background:var(--surface); border:1px solid var(--line); padding:18px; box-shadow:none;}
+  .project-title {font-size:17px; font-weight:650;}
+  .area-add-project {min-height:50px; margin-top:8px; margin-bottom:4px;}
+  .add-inline {margin:15px 0 0; color:var(--accent); font-weight:600;}
+  .fab {display:none;}
+  .mobile-bottom-bar {display:flex; align-items:center; gap:4px; position:fixed; z-index:22; bottom:0; left:0; right:0; padding:10px 16px calc(12px + env(safe-area-inset-bottom)); background:color-mix(in srgb,var(--surface) 95%,transparent); border-top:1px solid var(--line); box-shadow:0 -5px 22px #00000008;}
+  .mobile-bottom-bar button {display:flex; flex:1; flex-direction:column; align-items:center; justify-content:center; gap:2px; border:0; background:transparent; color:var(--muted); font-size:24px; min-height:49px; border-radius:12px;}
+  .mobile-bottom-bar button small {font-size:10px; font-weight:600;}
+  .mobile-bottom-bar button.active {color:var(--accent);}
+  .mobile-bottom-bar .mobile-bottom-add {flex:0 0 52px; width:52px; height:52px; min-height:52px; border-radius:16px; background:var(--accent); color:white; font-size:29px; margin-left:10px; box-shadow:0 6px 18px #2679e833;}
+  .modal {border-radius:25px 25px 0 0;}
+  .modal-backdrop {background:#12142165;}
+  .empty {padding:30px 6px;}
+  .bottom-note {padding-bottom:5px;}
+}
+
+/* Pointer-based mobile drag handles with a clear drop indicator. */
+.drag-grip {border:0; background:transparent; touch-action:none; display:inline-flex; align-items:center; justify-content:center; min-width:28px; min-height:34px;}
+.drop-target {outline:2px solid var(--accent); outline-offset:-2px; background:var(--tint);}
+.project-grip {margin-right:6px;}
+@media (max-width:700px) {
+  .project-card-top {display:flex; align-items:center;}
+  .drag-grip {min-width:38px; min-height:42px;}
+  .project-grip {margin-left:-9px;}
+}
