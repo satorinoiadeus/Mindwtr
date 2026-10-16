@@ -117,7 +117,6 @@ dialog = w.document.querySelector("[role=dialog]");
 fill(dialog.querySelector("input"), "Mobile life");
 await pause();
 await click("Save area");
-console.log("Area save diagnostic", { heading: w.document.querySelector("main h1")?.textContent, areas: JSON.parse(w.localStorage.getItem("still.workspace.v1")).areas.map(a => a.title), dialog: w.document.querySelector("[role=dialog]")?.textContent.slice(0, 90), toast: w.document.querySelector(".toast")?.textContent });
 await waitFor(() => w.document.querySelector("main h1")?.textContent === "Mobile life", "area navigation");
 await click("New project");
 dialog = w.document.querySelector("[role=dialog]");
