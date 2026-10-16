@@ -316,6 +316,29 @@ function App() {
             if (!w.projects.some((x) => x.id === p.id)) go(`project:${p.id}`);
         }
     }
+    function moveTaskTo(id: string, targetId: string) {
+        if (!w || id === targetId || busy || view === "trash") return;
+        const from = tasks.findIndex((t) => t.id === id);
+        const to = tasks.findIndex((t) => t.id === targetId);
+        if (from < 0 || to < 0) return;
+        if (view === "upcoming" && tasks[from].scheduled !== tasks[to].scheduled) return;
+        const ordered = tasks.map((t) => t.id);
+        ordered.splice(from, 1);
+        ordered.splice(to, 0, id);
+        const other = w.tasks.filter((t) => !ordered.includes(t.id)).map((t) => t.id);
+        const ids = [...ordered, ...other];
+        void commit({ ...w, tasks: w.tasks.map((t) => ({ ...t, order: ids.indexOf(t.id) })) }, "Task moved");
+    }
+    function reorderProject(id: string, targetId: string) {
+        if (!w || busy || id === targetId) return;
+        const ids = activeProjects.map((p) => p.id);
+        const from = ids.indexOf(id), to = ids.indexOf(targetId);
+        if (from < 0 || to < 0) return;
+        ids.splice(from, 1);
+        ids.splice(to, 0, id);
+        const all = [...ids, ...w.projects.filter((p) => !ids.includes(p.id)).map((p) => p.id)];
+        void commit({ ...w, projects: w.projects.map((p) => ({ ...p, order: all.indexOf(p.id) })) }, "Projects reordered");
+    }
     function reorder(id: string, direction: number) {
         if (!w) return;
         const i = tasks.findIndex((t) => t.id === id),
@@ -462,14 +485,7 @@ function App() {
                 />
             )}
             <main>
-                <div className="mobile-create" aria-label="Create and organize">
-                    <button className="secondary" onClick={addArea}>
-                        ＋ New area
-                    </button>
-                    <button className="secondary" onClick={addProject}>
-                        ＋ New project
-                    </button>
-                </div>
+
                 <div className="topline">
                     <button
                         className="mobile plain"
@@ -501,7 +517,7 @@ function App() {
                     </div>
                 )}
                 <header>
-                    <div className="eyebrow">MAKE ROOM FOR WHAT MATTERS</div>
+                    <div className="eyebrow">STILL · YOUR QUIET SPACE</div>
                     <div className="heading-line">
                         <h1>{title}</h1>
                         {p ? (
@@ -532,6 +548,11 @@ function App() {
                             subtitle[view] ||
                             "Your projects and next actions, in one place."}
                     </p>
+                    {area && (
+                        <button className="area-add-project" onClick={addProject}>
+                            <span className="area-add-icon">＋</span> Add project to {area.title}
+                        </button>
+                    )}
                     {p && (
                         <div className="project-info">
                             <span>
@@ -616,7 +637,12 @@ function App() {
                                     )
                                     .sort((a, b) => a.order - b.order)[0];
                             return (
-                                <article className="project-card" key={p.id}>
+                                <article className="project-card" key={p.id}
+                                    draggable={view !== "trash" && view !== "logbook"}
+                                    onDragStart={(e) => { e.dataTransfer.setData("application/x-still-project", p.id); e.dataTransfer.effectAllowed = "move"; }}
+                                    onDragOver={(e) => { if (e.dataTransfer.types.includes("application/x-still-project")) e.preventDefault(); }}
+                                    onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("application/x-still-project"); if (id) reorderProject(id, p.id); }}
+                                >
                                     <div className="project-card-top">
                                         <button
                                             className="project-title"
@@ -760,10 +786,11 @@ function App() {
                                         </h3>
                                     )}
                                 <div
-                                    className={
-                                        "task-row " +
-                                        (t.completedAt ? "done" : "")
-                                    }
+                                    className={"task-row " + (t.completedAt ? "done" : "")}
+                                    draggable={view !== "trash" && !busy}
+                                    onDragStart={(e) => { e.dataTransfer.setData("application/x-still-task", t.id); e.dataTransfer.effectAllowed = "move"; }}
+                                    onDragOver={(e) => { if (e.dataTransfer.types.includes("application/x-still-task")) e.preventDefault(); }}
+                                    onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("application/x-still-task"); if (id) moveTaskTo(id, t.id); }}
                                 >
                                     <button
                                         className={
@@ -873,6 +900,7 @@ function App() {
                                         </div>
                                     </div>
                                     <div className="row-actions">
+                                        {view !== "trash" && <span className="drag-grip" title="Drag to reorder" aria-hidden="true">⠿</span>}
                                         {view === "trash" ? (
                                             <button
                                                 className="text-button"
@@ -985,9 +1013,12 @@ function App() {
                     One thing at a time is enough.<span>✳</span>
                 </div>
             </main>
-            <button className="fab" onClick={addTask} aria-label="Add task">
-                ＋
-            </button>
+            <nav className="mobile-bottom-bar" aria-label="Quick navigation">
+                <button onClick={() => go("inbox")} className={view === "inbox" ? "active" : ""}>⌑<small>Inbox</small></button>
+                <button onClick={() => go("today")} className={view === "today" ? "active" : ""}>☀<small>Today</small></button>
+                <button onClick={() => setMenu(true)}>▦<small>Browse</small></button>
+                <button onClick={addTask} className="mobile-bottom-add" aria-label="Add task">＋</button>
+            </nav>
             {message && (
                 <div className="toast" role="status">
                     <span>{message}</span>
