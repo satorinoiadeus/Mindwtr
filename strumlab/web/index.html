@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#11100f" />
+  <meta name="color-scheme" content="dark" />
+  <title>StrumLab — Virtual Guitar</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div>
+          <div class="brand-name">StrumLab</div>
+          <div class="brand-sub">virtual steel-string guitar</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div id="updateBadge" class="update-badge hidden">Update available</div>
+        <button id="audioBtn" class="btn primary">Enable guitar</button>
+        <button id="helpBtn" class="btn icon-btn" aria-label="Keyboard help">?</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="player-card">
+        <div class="player-toolbar">
+          <div class="segmented" id="modeTabs" aria-label="Playing mode">
+            <button data-mode="chord" class="active">Chords</button>
+            <button data-mode="note">Notes</button>
+            <button data-mode="custom">Build</button>
+          </div>
+          <div class="audio-state">
+            <span class="live-dot"></span>
+            <span id="soundStatus">Sound off</span>
+            <span class="dot-sep">·</span>
+            <span id="sampleStatus">CC0 steel guitar samples</span>
+          </div>
+        </div>
+
+        <div class="guitar-stage">
+          <div class="neck-wrap">
+            <div class="neck-labels">
+              <span>LOW E</span><span>A</span><span>D</span><span>G</span><span>B</span><span>HIGH E</span>
+            </div>
+            <div class="nut-labels" id="stringLabels"></div>
+            <div id="fretboard" class="fretboard" aria-label="Interactive guitar fretboard"></div>
+            <div class="fret-numbers" id="fretNumbers"></div>
+          </div>
+
+          <div class="body-zone">
+            <div class="body-grain" aria-hidden="true"></div>
+            <div class="soundhole" id="strumPad" aria-label="Strum area">
+              <div class="soundhole-ring"></div>
+              <div class="soundhole-center">STRUM</div>
+              <div class="strum-hint">drag up / down</div>
+            </div>
+            <div class="mobile-strum">
+              <button id="upBtn" class="strum-button" aria-label="Upstroke">↑</button>
+              <button id="downBtn" class="strum-button primary" aria-label="Downstroke">↓</button>
+            </div>
+            <div class="string-buttons" id="stringButtons"></div>
+          </div>
+        </div>
+
+        <div class="performance-strip">
+          <button id="downStroke" class="performance-key"><kbd>↓</kbd><span>Downstroke</span></button>
+          <button id="upStroke" class="performance-key"><kbd>↑</kbd><span>Upstroke</span></button>
+          <button id="arpBtn" class="performance-key"><kbd>R</kbd><span>Arpeggio</span></button>
+          <div class="performance-tip">Play strings with <kbd>A S D F G H</kbd></div>
+        </div>
+      </section>
+
+      <aside class="control-deck">
+        <section class="panel chord-panel" id="chordPanel">
+          <div class="panel-kicker">CHORD LIBRARY</div>
+          <div class="title-row">
+            <div>
+              <h1 id="chordTitle">C Major</h1>
+              <div class="chord-meta" id="chordMeta"></div>
+            </div>
+            <div class="voicing-nav">
+              <button id="prevVoicing" class="square-btn" aria-label="Previous voicing">‹</button>
+              <span id="voicingIndex">1 / 1</span>
+              <button id="nextVoicing" class="square-btn" aria-label="Next voicing">›</button>
+            </div>
+          </div>
+          <div class="select-row">
+            <label>Root<select id="rootSelect"></select></label>
+            <label>Chord type<select id="qualitySelect"></select></label>
+          </div>
+        </section>
+
+        <section class="panel custom-panel hidden" id="customPanel">
+          <div class="panel-kicker">CUSTOM VOICING</div>
+          <h2>Build your own chord</h2>
+          <p>Tap one fret per string. Tap the same fret again to mute that string.</p>
+          <div class="custom-name-row">
+            <input id="customName" maxlength="24" value="My Chord" />
+            <button id="saveCustom" class="btn primary small">Save</button>
+          </div>
+          <div id="customSaved" class="custom-saved"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-kicker">PERFORMANCE</div>
+          <div class="slider-row">
+            <label for="capoRange"><span>Capo</span><strong id="capoValue">0</strong></label>
+            <input id="capoRange" type="range" min="0" max="8" step="1" value="0" />
+          </div>
+          <div class="slider-row">
+            <label for="speedRange"><span>Strum spread</span><strong id="speedValue">Medium</strong></label>
+            <input id="speedRange" type="range" min="12" max="90" step="1" value="42" />
+          </div>
+          <div class="slider-row">
+            <label for="dynamicsRange"><span>Pick strength</span><strong id="dynamicsValue">Natural</strong></label>
+            <input id="dynamicsRange" type="range" min="28" max="100" step="1" value="78" />
+          </div>
+          <div class="select-row performance-selects">
+            <label>Arpeggio<select id="patternSelect">
+              <option value="rise">Low → high</option>
+              <option value="fall">High → low</option>
+              <option value="roll">Rolling</option>
+              <option value="folk">Folk pulse</option>
+            </select></label>
+            <label>Tempo<select id="tempoSelect">
+              <option value="72">72 BPM</option><option value="90">90 BPM</option><option value="108" selected>108 BPM</option><option value="126">126 BPM</option><option value="144">144 BPM</option>
+            </select></label>
+          </div>
+          <div class="toggle-row">
+            <span>Show note names</span>
+            <label class="switch"><input id="noteNamesToggle" type="checkbox"/><span></span></label>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="title-row compact">
+            <div><div class="panel-kicker">CHORD SET</div><h2 id="setTitle">Default</h2></div>
+            <button id="saveSetBtn" class="btn small">Save set</button>
+          </div>
+          <div id="slotGrid" class="slot-grid"></div>
+          <div class="set-actions">
+            <select id="setSelect"></select>
+            <button id="newSetBtn" class="btn small">New</button>
+            <button id="deleteSetBtn" class="btn danger small">Delete</button>
+          </div>
+        </section>
+
+        <section class="license-note">
+          <strong>Real guitar audio</strong>
+          <span>Meta Open Sound — Meta Steel Guitar (CC0). Samples are streamed and cached on first use; synthesized fallback works offline.</span>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="footerbar">
+      <span id="versionLabel">StrumLab v2.0.0</span>
+      <span>456+ chord families · multiple voicings · six independently sampled strings</span>
+    </footer>
+  </div>
+
+  <dialog id="helpDialog">
+    <form method="dialog">
+      <div class="dialog-head"><div><div class="panel-kicker">CONTROLS</div><h2>Play from the keyboard</h2></div><button class="square-btn">×</button></div>
+      <div class="help-grid">
+        <span>Downstroke</span><kbd>↓ / Space</kbd>
+        <span>Upstroke</span><kbd>↑</kbd>
+        <span>Arpeggio</span><kbd>R</kbd>
+        <span>Strings low → high</span><kbd>A S D F G H</kbd>
+        <span>Load chord slot</span><kbd>0–9</kbd>
+        <span>Set capo</span><kbd>Alt + 1–8</kbd>
+        <span>Remove capo</span><kbd>Esc</kbd>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
