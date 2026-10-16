@@ -7,3 +7,11 @@
 - Still 0.2.1 Android ARM64 debug APK compiled successfully with Rust 1.90, Android SDK 36, NDK 29 and Gradle 9.6.1. Package metadata verified: app.still.tasks, versionName 0.2.1, versionCode 2001, label Still, minimum Android API 24. APK v2 signature verified; certificate SHA-256 81fcc46d6bfd1cf8d0dfc6c49a1a7cc0b700a2a3c9a517a604b33649b046d6b8 matches the prior build. This is a fresh build containing the mobile update. Physical device testing remains unverified.
 - Windows x64 release executable and NSIS EXE installer compiled successfully using cargo-xwin and the MSVC sysroot. PE signatures verified (x64 application, x86 NSIS installer wrapper). Installer is unsigned. Windows installation and runtime have not been tested. GitHub source uploaded to the `still-rebuild` branch after reconnecting the GitHub integration; automated native builds are validated separately in GitHub Actions.
 - Versioned backup and SQLite schemas are unchanged. Native identifiers and signing requirements are unchanged; no signing secrets are included.
+
+## Mobile redesign verification checklist (v0.3 candidate)
+
+- New bottom navigation: Inbox, Today, Browse, Add task.
+- Area view: Add project action automatically chooses that Area.
+- Task/project ordering: desktop HTML drag and Android touch Pointer Events with dedicated grips and target highlighting.
+- Confirm on an Android device: long-press/touch drag, scroll while dragging, screen reader focus, Area/project creation, app relaunch persistence, and backup/restore.
+- GitHub Actions `still-build.yml` runs `npm run verify`, Android ARM64 debug APK, and Windows NSIS installer. New native artifacts are not considered verified until both jobs succeed.
