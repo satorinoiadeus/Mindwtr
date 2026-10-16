@@ -1,0 +1,210 @@
+/* Still Studio. Layout conventions were researched in Vikunja's open-source
+   project navigation, list, Kanban, and task card components. This is an
+   independent React/CSS implementation that preserves Still's identity. */
+html[data-design="studio"] {
+    --bg: #f7f9f7;
+    --side: #edf2ee;
+    --surface: #ffffff;
+    --text: #20342c;
+    --muted: #73867c;
+    --line: #e2eae3;
+    --accent: #34745b;
+    --tint: #e7f3ec;
+    --shadow: 0 12px 38px #213c2b0d;
+    color-scheme: light;
+}
+html[data-design="studio"][data-theme="dark"] {
+    --bg: #141d19;
+    --side: #19241e;
+    --surface: #202d25;
+    --text: #e7f1e9;
+    --muted: #a1b4a6;
+    --line: #34483b;
+    --accent: #91cba8;
+    --tint: #2b4536;
+    --shadow: 0 18px 45px #0005;
+    color-scheme: dark;
+}
+html[data-design="classic"] {
+    --bg: #fbfcf9;
+    --side: #f0f3ed;
+    --surface: #ffffff;
+    --text: #303d35;
+    --muted: #7c867f;
+    --line: #e6eae3;
+    --accent: #416b56;
+    --tint: #e1eade;
+    --shadow: 0 24px 80px #18302725;
+}
+html[data-design="classic"][data-theme="dark"] {
+    --bg: #1b231f;
+    --side: #171e1a;
+    --surface: #253029;
+    --text: #e2e9e1;
+    --muted: #a2b0a4;
+    --line: #364239;
+    --accent: #a1c5a8;
+    --tint: #354b3b;
+    --shadow: 0 24px 80px #0008;
+}
+html[data-design="studio"] body {font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;}
+html[data-design="studio"] .shell > aside {width: 282px; padding: 30px 18px 20px;}
+html[data-design="studio"] .brand {font-weight: 680; letter-spacing: -1.4px; font-family: Georgia, serif; margin-bottom: 28px;}
+html[data-design="studio"] .mark.small {background: var(--accent); border-radius: 11px; box-shadow: 0 4px 12px #0000000d;}
+html[data-design="studio"] .brand-label {letter-spacing: 1px; font-weight: 650;}
+html[data-design="studio"] .shell > main {margin-left: 282px; max-width: none; padding: 28px clamp(24px, 4.5vw, 82px) 80px;}
+html[data-design="studio"] .shell > aside nav button,
+html[data-design="studio"] .area-line > button:first-child,
+html[data-design="studio"] .project-link {border-radius: 11px; min-height: 39px; font-size: 13px;}
+html[data-design="studio"] .shell > aside nav button.selected,
+html[data-design="studio"] .area-line > button.selected,
+html[data-design="studio"] .project-link.selected {background: var(--surface); color: var(--accent); box-shadow: 0 2px 8px #13291b08; font-weight: 700;}
+html[data-design="studio"] .search {border-radius: 11px; background: var(--surface); border: 1px solid var(--line);}
+html[data-design="studio"] .new-project {border-radius: 11px; border: 1px dashed var(--accent); color: var(--accent); background: transparent; font-weight: 650;}
+html[data-design="studio"] .topline {color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 16px;}
+html[data-design="studio"] header {margin-top: 35px; margin-bottom: 23px;}
+html[data-design="studio"] header h1 {font-size: clamp(40px, 5vw, 60px); font-family: Georgia, "Times New Roman", serif; letter-spacing: -2.3px; font-weight: 500;}
+html[data-design="studio"] header p {max-width: 780px; font-size: 14px; line-height: 1.6;}
+html[data-design="studio"] .eyebrow {letter-spacing: 1.5px; font-weight: 750; font-size: 10px; color: var(--accent);}
+html[data-design="studio"] .heading-actions {display: flex; align-items: center; gap: 7px;}
+html[data-design="studio"] .icon-action {min-width: 42px; min-height: 42px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface);}
+html[data-design="studio"] .primary {background: var(--accent); border-radius: 10px;}
+html[data-design="studio"] .primary:hover {filter: brightness(.92);}
+html[data-design="studio"] .secondary {border-radius: 10px;}
+html[data-design="studio"] .task-section {background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; padding: 6px 20px; box-shadow: var(--shadow);}
+html[data-design="studio"] .task-row {min-height: 66px; border-color: var(--line);}
+html[data-design="studio"] .task-row:hover {background: color-mix(in srgb, var(--tint) 40%, var(--surface));}
+html[data-design="studio"] .task-title {font-weight: 600; font-size: 14px; letter-spacing: -.1px;}
+html[data-design="studio"] .task-meta {font-size: 11px;}
+html[data-design="studio"] .project-card {border-radius: 16px; border: 1px solid var(--line); box-shadow: var(--shadow);}
+html[data-design="studio"] .project-title {font-family: inherit; font-weight: 700; font-size: 16px;}
+html[data-design="studio"] .project-card progress, html[data-design="studio"] .project-info progress {accent-color: var(--accent);}
+html[data-design="studio"] .add-inline {color: var(--accent);}
+html[data-design="studio"] .mobile-bottom-add {background: var(--accent);}
+/* View selector, filters, and capture */
+.workspace-tools {display:flex; justify-content:space-between; gap:14px; align-items:center; flex-wrap:wrap; margin: 18px 0 14px;}
+.view-tabs {display:flex; align-items:center; gap:3px; padding:4px; background: var(--side); border:1px solid var(--line); border-radius:13px;}
+.view-tabs button {border:0; background:transparent; color:var(--muted); display:flex; align-items:center; gap:7px; min-height:37px; border-radius:9px; padding:8px 13px; font-size:12px; font-weight:650;}
+.view-tabs button.active {background:var(--surface); color:var(--accent); box-shadow:0 2px 7px #0000000b;}
+.view-tabs button span {font-size:17px; line-height:1;}
+.filter-tools {display:flex; flex-wrap:wrap; align-items:center; gap:8px;}
+.filter-tools select,.filter-search {border:1px solid var(--line); border-radius:10px; background:var(--surface); color:var(--text); min-height:39px; padding:7px 9px; font-size:12px;}
+.filter-search {display:flex; align-items:center; gap:6px; padding:0 10px;}
+.filter-search span {font-size:20px; color:var(--muted);}
+.filter-search input {width:135px; background:transparent; color:var(--text); border:0; outline:0; font-size:12px;}
+.quick-capture {display:flex; gap:10px; align-items:center; background:var(--surface); border:1px solid var(--line); border-radius:13px; padding:8px 10px 8px 16px; margin-bottom:18px; box-shadow:0 2px 8px #00000005;}
+.quick-capture:focus-within {border-color:var(--accent);}
+.quick-plus {font-size:24px; color:var(--accent);}
+.quick-capture input {flex:1; min-width:0; border:0; outline:0; background:transparent; color:var(--text); padding:8px 0; font-size:13px;}
+.quick-capture .primary {min-height:34px; padding:7px 17px;}
+/* Kanban */
+.board-view {display:grid; grid-auto-flow:column; grid-auto-columns:minmax(245px, 1fr); gap:14px; align-items:start; overflow-x:auto; padding:4px 2px 20px; scrollbar-width:thin;}
+.board-lane {background:var(--side); border:1px solid var(--line); border-radius:16px; min-height:260px; padding:12px; transition:background .14s,outline .14s;}
+.board-drop {outline:2px solid var(--accent); background:var(--tint);}
+.board-lane-head {display:flex; align-items:center; gap:9px; min-height:35px; padding:1px 3px 12px;}
+.board-lane-head h2 {font:700 13px/1.4 Inter,system-ui,sans-serif; letter-spacing:0; margin:0; color:var(--text);}
+.lane-dot {width:8px; height:8px; background:var(--accent); border-radius:50%; flex-shrink:0;}
+.board-lane:nth-child(2) .lane-dot {background:#c69555;}
+.board-lane:nth-child(3) .lane-dot {background:#8c82bd;}
+.lane-count {margin-left:auto; border-radius:20px; background:var(--surface); color:var(--muted); font-size:11px; font-weight:700; padding:3px 9px;}
+.board-cards {display:flex; flex-direction:column; gap:9px;}
+.board-card {background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px; box-shadow:0 3px 10px #1a31270b; cursor:grab;}
+.board-card:active {cursor:grabbing;}
+.board-card-top {display:flex; align-items:flex-start; gap:9px;}
+.board-card-top .check,.task-table .check {width:20px; height:20px; min-width:20px; font-size:0; border:1.5px solid var(--muted); border-radius:50%; background:transparent;}
+.board-card-top .check:hover,.task-table .check:hover {background:var(--tint); border-color:var(--accent);}
+.board-card-title {flex:1; text-align:left; border:0; padding:0; background:none; color:var(--text); font-size:13px; font-weight:650; line-height:1.45; overflow-wrap:anywhere;}
+.card-trash {border:0; background:transparent; color:var(--muted); font-size:19px; border-radius:6px; min-width:26px; min-height:26px;}
+.card-trash:hover {background:var(--tint); color:#b84f4f;}
+.board-card-meta {display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:12px 0 2px 29px; color:var(--muted); font-size:10px;}
+.board-tag {display:inline-flex; border-radius:6px; padding:3px 6px; background:var(--tint); color:var(--accent); font-size:10px; font-weight:650; margin-right:4px;}
+.priority-high {color:#b76d37; font-weight:700;}
+.board-move {display:block; margin:10px 0 0 28px; max-width:calc(100% - 28px); background:transparent; color:var(--muted); border:0; font-size:10px; cursor:pointer;}
+.lane-add {display:flex; align-items:center; gap:4px; margin-top:10px;}
+.lane-add input {min-width:0; width:100%; padding:10px 7px; background:transparent; border:1px dashed transparent; border-radius:8px; color:var(--text); font-size:12px;}
+.lane-add input:focus {background:var(--surface); border-color:var(--accent); outline:0;}
+.lane-add .primary {padding:7px 9px; min-height:32px; font-size:11px;}
+/* Table */
+.table-wrap {width:100%; overflow-x:auto; background:var(--surface); border:1px solid var(--line); border-radius:15px; box-shadow:var(--shadow);}
+.task-table {border-collapse:collapse; width:100%; min-width:680px; text-align:left;}
+.task-table th {font-size:11px; font-weight:750; color:var(--muted); background:var(--side); padding:15px 14px; white-space:nowrap;}
+.task-table td {padding:13px 14px; font-size:12px; border-top:1px solid var(--line); vertical-align:middle; color:var(--muted);}
+.task-table tr:hover td {background:color-mix(in srgb,var(--tint) 30%,var(--surface));}
+.table-title {border:0; background:none; color:var(--text); text-align:left; font-weight:650; font-size:13px;}
+.table-edit {border:0; background:var(--tint); color:var(--accent); border-radius:7px; font-size:11px; padding:6px 10px;}
+.table-empty {text-align:center; padding:30px;}
+/* Calendar */
+.calendar-view {background:var(--surface); border:1px solid var(--line); border-radius:16px; overflow:hidden; box-shadow:var(--shadow);}
+.calendar-toolbar {display:flex; align-items:center; justify-content:space-between; gap:12px; padding:20px 20px 16px;}
+.calendar-toolbar h2 {font:700 18px/1.3 Inter,system-ui,sans-serif; margin:0; color:var(--text);}
+.calendar-toolbar > div {display:flex; gap:6px;}
+.calendar-toolbar button {min-height:34px; min-width:35px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--text);}
+.calendar-grid {display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); border-top:1px solid var(--line);}
+.calendar-weekday {text-align:center; padding:12px 4px; background:var(--side); color:var(--muted); font-size:11px; font-weight:750;}
+.calendar-cell {min-height:105px; border-top:1px solid var(--line); border-right:1px solid var(--line); padding:7px; overflow:hidden;}
+.calendar-cell:nth-child(7n) {border-right:0;}
+.calendar-outside {background:color-mix(in srgb,var(--side) 50%,var(--surface));}
+.calendar-today .calendar-day {background:var(--accent); color:white;}
+.calendar-selected {background:var(--tint);}
+.calendar-day {border:0; background:transparent; color:var(--text); font-size:12px; font-weight:750; border-radius:50%; width:26px; height:26px;}
+.calendar-items {display:flex; flex-direction:column; gap:4px; margin-top:5px;}
+.calendar-item {border:0; background:var(--tint); color:var(--accent); border-radius:5px; padding:5px 6px; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:10px; font-weight:600;}
+.calendar-cell small {font-size:10px;}
+.calendar-footer {display:flex; align-items:center; justify-content:space-between; padding:16px 20px; gap:10px; border-top:1px solid var(--line); color:var(--muted); font-size:12px;}
+@media (max-width:1100px) {.workspace-tools {align-items:flex-start;}.filter-tools {width:100%;}.board-view {grid-auto-columns:minmax(245px,290px);}}
+@media (max-width:700px) {
+    html[data-design="studio"] .shell > aside {width:min(88vw,320px);}
+    html[data-design="studio"] .shell > main {margin-left:0; padding:16px 17px calc(114px + env(safe-area-inset-bottom));}
+    html[data-design="studio"] .topline {margin:0 0 20px; padding:5px 0 13px;}
+    html[data-design="studio"] header {margin:22px 0 21px;}
+    html[data-design="studio"] header h1 {font-size:clamp(36px,10vw,49px); font-weight:500; letter-spacing:-1.7px;}
+    html[data-design="studio"] header p {font-size:13px;}
+    html[data-design="studio"] .heading-line {gap:8px;}
+    html[data-design="studio"] .heading-actions .secondary {font-size:11px; padding:8px 10px;}
+    html[data-design="studio"] .heading-actions .icon-action {min-width:35px; min-height:35px;}
+    .workspace-tools {margin:13px 0 12px; gap:10px;}
+    .view-tabs {width:100%; display:grid; grid-template-columns:repeat(4,1fr);}
+    .view-tabs button {padding:7px 2px; justify-content:center; gap:5px; font-size:11px;}
+    .view-tabs button span {font-size:15px;}
+    .filter-tools {display:grid; grid-template-columns:1fr 1fr; width:100%;}
+    .filter-search {grid-column:span 2;}
+    .filter-search input {width:100%;}
+    .filter-tools select {width:100%; min-width:0;}
+    .quick-capture {padding:5px 8px 5px 12px;}
+    .quick-capture input {font-size:13px;}
+    .board-view {grid-auto-columns:minmax(76vw,76vw); gap:12px; margin-right:-17px; padding-right:17px; scroll-snap-type:x mandatory;}
+    .board-lane {scroll-snap-align:start; min-height:250px;}
+    .calendar-toolbar {padding:15px 11px;}
+    .calendar-toolbar h2 {font-size:15px;}
+    .calendar-cell {min-height:60px; padding:3px 2px;}
+    .calendar-day {width:25px; height:25px; font-size:11px;}
+    .calendar-weekday {font-size:9px; padding:9px 0;}
+    .calendar-item {font-size:8px; padding:4px 3px;}
+    .calendar-footer {padding:12px; font-size:11px;}
+    .calendar-footer .secondary {font-size:11px;}
+    .task-table {min-width:640px;}
+    html[data-design="studio"] .task-section {padding:0 13px; border-radius:14px;}
+    html[data-design="studio"] .task-row {min-height:64px;}
+    html[data-design="studio"] .task-title {font-size:15px;}
+    html[data-design="studio"] .mobile-bottom-bar .mobile-bottom-add {background:var(--accent); box-shadow:0 6px 16px #2c65492b;}
+}
+@media (prefers-reduced-motion: reduce) {
+    .board-lane {transition:none;}
+}
+.board-grip {border:0; background:transparent; color:var(--muted); font-size:19px; touch-action:none; min-width:30px; min-height:30px; padding:0; cursor:grab;}
+.row-trash {border:0; background:transparent; color:var(--muted); border-radius:7px; min-width:27px; min-height:32px; font-size:17px;}
+.row-trash:hover {color:#b84f4f; background:var(--tint);}
+@media (max-width:700px) { .row-trash {min-width:34px; min-height:42px;} .board-grip {min-width:36px; min-height:36px;} }
+/* The optional Classic preset restores the quiet green/serif Still look. */
+html[data-design="classic"] header h1 {font-family:Georgia,"Times New Roman",serif; font-weight:400;}
+html[data-design="classic"] .primary {background:#416b56; color:white;}
+html[data-design="classic"] .view-tabs {background:var(--side);}
+html[data-design="classic"] .task-section {border-radius:9px;}
+html[data-design="classic"] .project-card {border-radius:10px;}
+html[data-design="classic"] .quick-capture {border-radius:9px;}
+html[data-design="classic"] .mobile-bottom-bar .mobile-bottom-add {background:#416b56; box-shadow:none;}
+html[data-design="classic"][data-theme="dark"] .primary,
+html[data-design="classic"][data-theme="dark"] .mobile-bottom-bar .mobile-bottom-add {background:#416b56; color:white;}
+html[data-design="studio"] .shell > main {width:calc(100% - 282px);}
+html[data-design="studio"] .heading-actions {flex-shrink:0;}
+@media (max-width:700px) {html[data-design="studio"] .shell > main {width:100%;}}
