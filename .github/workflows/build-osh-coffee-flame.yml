@@ -1,0 +1,149 @@
+name: Build Osh Coffee Clash Flame
+
+on:
+  push:
+    branches: [osh-coffee-flame]
+    paths:
+      - 'osh-flame/**'
+      - '.github/workflows/build-osh-coffee-flame.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Restore Flame source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p game
+          cat osh-flame/source.part*.b64 | base64 -d > /tmp/osh-source.zip
+          unzip -q /tmp/osh-source.zip -d game
+          test -f game/pubspec.yaml
+          test -f game/lib/main.dart
+          sed -i "s#tree/fangyuan-fighter#releases#g" game/lib/main.dart
+          sed -i "s/Colors.redAccent.withValues(alpha:.3)/Colors.redAccent.withAlpha(77)/g" game/lib/main.dart
+      - name: Generate Android runner
+        working-directory: game
+        run: flutter create --platforms=android --project-name osh_coffee_clash --org com.oshcoffee .
+      - name: Dependencies
+        working-directory: game
+        run: flutter pub get
+      - name: Analyze
+        working-directory: game
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Smoke test UI boot
+        working-directory: game
+        run: flutter test test/smoke_test.dart
+      - name: Build release APK
+        working-directory: game
+        run: flutter build apk --release
+      - name: Verify APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s game/build/app/outputs/flutter-apk/app-release.apk
+          unzip -t game/build/app/outputs/flutter-apk/app-release.apk >/dev/null
+          cp game/build/app/outputs/flutter-apk/app-release.apk OshCoffeeClash-Flame-v3.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OshCoffeeClash-Flame-v3-Android
+          path: OshCoffeeClash-Flame-v3.apk
+          if-no-files-found: error
+
+  windows:
+    name: Windows build + launch test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Restore Flame source
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force game | Out-Null
+          $parts = Get-ChildItem 'osh-flame/source.part*.b64' | Sort-Object Name
+          if ($parts.Count -lt 1) { throw 'No source chunks found' }
+          $b64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\osh-source.zip", [Convert]::FromBase64String($b64))
+          Expand-Archive -Path "$env:RUNNER_TEMP\osh-source.zip" -DestinationPath game -Force
+          if (!(Test-Path game/pubspec.yaml)) { throw 'pubspec missing' }
+          $main = Get-Content game/lib/main.dart -Raw
+          $main = $main.Replace('tree/fangyuan-fighter','releases').Replace('Colors.redAccent.withValues(alpha:.3)','Colors.redAccent.withAlpha(77)')
+          Set-Content game/lib/main.dart $main -NoNewline
+      - name: Generate Windows runner
+        working-directory: game
+        shell: pwsh
+        run: |
+          flutter config --enable-windows-desktop
+          flutter create --platforms=windows --project-name osh_coffee_clash --org com.oshcoffee .
+      - name: Dependencies
+        working-directory: game
+        run: flutter pub get
+      - name: Analyze
+        working-directory: game
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Smoke test UI boot
+        working-directory: game
+        run: flutter test test/smoke_test.dart
+      - name: Build Windows release
+        working-directory: game
+        run: flutter build windows --release
+      - name: Real launch smoke test
+        shell: pwsh
+        run: |
+          $release = Get-ChildItem -Path game/build/windows -Directory -Recurse | Where-Object { $_.Name -eq 'Release' } | Select-Object -First 1
+          if (!$release) { throw 'Release directory not found' }
+          $exe = Get-ChildItem -Path $release.FullName -Filter '*.exe' | Select-Object -First 1
+          if (!$exe) { throw 'Windows EXE not found' }
+          $p = Start-Process -FilePath $exe.FullName -WorkingDirectory $release.FullName -PassThru
+          Start-Sleep -Seconds 8
+          $p.Refresh()
+          if ($p.HasExited) { throw "Game exited during startup with code $($p.ExitCode)" }
+          Stop-Process -Id $p.Id -Force
+          Write-Host 'OSH_FLAME_BOOT_OK'
+          Compress-Archive -Path "$($release.FullName)\*" -DestinationPath OshCoffeeClash-Flame-v3-Windows.zip -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OshCoffeeClash-Flame-v3-Windows
+          path: OshCoffeeClash-Flame-v3-Windows.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish latest build
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: OshCoffeeClash-Flame-v3-*
+          path: release
+          merge-multiple: true
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO='${{ github.repository }}'
+          TAG='osh-coffee-clash-latest'
+          if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$REPO" --title 'Osh Coffee Clash — Latest' --notes 'Latest tested Flame/Flutter build. Windows: unzip the package and run the EXE. Android: install the APK.' --target '${{ github.sha }}'
+          fi
+          gh release upload "$TAG" release/OshCoffeeClash-Flame-v3.apk release/OshCoffeeClash-Flame-v3-Windows.zip --repo "$REPO" --clobber
+          gh release edit "$TAG" --repo "$REPO" --target '${{ github.sha }}' --title 'Osh Coffee Clash — Latest'
