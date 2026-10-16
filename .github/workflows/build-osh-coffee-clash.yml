@@ -23,10 +23,19 @@ jobs:
           mkdir -p meme-fighter/project
           base64 -d meme-fighter/source.zip.b64 > /tmp/osh-coffee-clash.zip
           unzip -o /tmp/osh-coffee-clash.zip -d meme-fighter/project
-          # Godot 4.5 Android export requires ETC2/ASTC mobile texture imports even for this code-drawn game.
-          if ! grep -q '^rendering/textures/vram_compression/import_etc2_astc=true$' meme-fighter/project/project.godot; then
-            printf '\nrendering/textures/vram_compression/import_etc2_astc=true\n' >> meme-fighter/project/project.godot
-          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('meme-fighter/project/project.godot')
+          s = p.read_text()
+          s = s.replace('\nrendering/textures/vram_compression/import_etc2_astc=true\n', '\n')
+          needle = '[rendering]\n'
+          if needle not in s:
+              raise SystemExit('Missing [rendering] section')
+          if 'textures/vram_compression/import_etc2_astc=true' not in s:
+              s = s.replace(needle, needle + 'textures/vram_compression/import_etc2_astc=true\n', 1)
+          p.write_text(s)
+          PY
+          grep -A6 '^\[rendering\]$' meme-fighter/project/project.godot
           find meme-fighter/project -maxdepth 2 -type f -print
 
       - name: Set up Java 17
