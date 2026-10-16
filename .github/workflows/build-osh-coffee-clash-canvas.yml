@@ -1,0 +1,111 @@
+name: Build Osh Coffee Clash Canvas
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [fangyuan-fighter]
+    paths:
+      - 'meme-fighter-canvas/**'
+      - '.github/workflows/build-osh-coffee-clash-canvas.yml'
+  push:
+    tags:
+      - 'osh-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore source bundle
+        shell: bash
+        run: |
+          mkdir -p restored
+          cat meme-fighter-canvas/source.b64.part* | base64 -d > /tmp/source.zip
+          unzip -q /tmp/source.zip -d restored
+          node --check restored/game/game.js
+          test -f restored/game/assets/fang.webp
+          test -f restored/game/assets/genghis.webp
+          test -f restored/game/assets/arcen.webp
+          test -f restored/game/assets/stage.jpg
+          echo OSH_SOURCE_OK
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OshCoffeeClash-Source
+          path: restored/
+
+  windows:
+    needs: prepare
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: OshCoffeeClash-Source
+          path: src
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build Windows EXE
+        shell: pwsh
+        run: |
+          dotnet restore src/windows/OshCoffeeClash.csproj
+          dotnet publish src/windows/OshCoffeeClash.csproj -c Release -r win-x64 --self-contained true -o out
+          if (!(Test-Path out/OshCoffeeClash.exe)) { throw 'EXE missing' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OshCoffeeClash-Windows-Canvas
+          path: out/OshCoffeeClash.exe
+
+  android:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: OshCoffeeClash-Source
+          path: src
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build Android APK
+        shell: bash
+        run: |
+          mkdir -p src/android/app/src/main/assets
+          rm -rf src/android/app/src/main/assets/game
+          cp -r src/game src/android/app/src/main/assets/game
+          yes | sdkmanager 'platforms;android-35' 'build-tools;35.0.0' >/dev/null || true
+          gradle -p src/android assembleDebug --no-daemon
+          mkdir -p out
+          cp src/android/app/build/outputs/apk/debug/app-debug.apk out/OshCoffeeClash.apk
+          test -s out/OshCoffeeClash.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OshCoffeeClash-Android-Canvas
+          path: out/OshCoffeeClash.apk
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/osh-v')
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: OshCoffeeClash-Windows-Canvas
+          path: release
+      - uses: actions/download-artifact@v4
+        with:
+          name: OshCoffeeClash-Android-Canvas
+          path: release
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/OshCoffeeClash.exe
+            release/OshCoffeeClash.apk
+          generate_release_notes: true
