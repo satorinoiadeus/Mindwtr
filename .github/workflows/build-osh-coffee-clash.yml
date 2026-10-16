@@ -40,7 +40,6 @@ jobs:
           p.write_text(s)
           PY
           test "$(find meme-fighter/project/assets -name '*.png' | wc -l)" -eq 100
-          grep -A6 '^\[rendering\]$' meme-fighter/project/project.godot
           echo "Generated asset count: $(find meme-fighter/project/assets -name '*.png' | wc -l)"
 
       - name: Set up Java 17
@@ -83,6 +82,16 @@ jobs:
       - name: Import project
         run: |
           "$HOME/.local/bin/godot" --headless --path meme-fighter/project --import --verbose
+
+      - name: Smoke test game launch
+        run: |
+          set -o pipefail
+          "$HOME/.local/bin/godot" --headless --path meme-fighter/project --quit-after 10 2>&1 | tee /tmp/osh-runtime.log
+          if grep -E "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR: Failed to load script" /tmp/osh-runtime.log; then
+            echo "Runtime smoke test failed"
+            exit 1
+          fi
+          echo "Runtime smoke test passed"
 
       - name: Export Windows EXE
         run: |
