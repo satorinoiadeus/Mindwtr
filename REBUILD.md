@@ -1,6 +1,6 @@
 # Rebuild scope
 
-Base branch: `things3-1to1`, containing the user's earlier task-list selectors and Things shell. The rebuild stays in the same repository and preserves that branch's ancestry. Original files removed from the active tree remain recoverable from Git history.
+Still is committed to `still-rebuild`, branched from `main` in the existing Mindwtr repository. The source was originally developed using the earlier `things3-1to1` work as a reference. The original `main` branch remains unchanged, and earlier repository files remain recoverable from Git history.
 
 | Decision | Implementation |
 | --- | --- |

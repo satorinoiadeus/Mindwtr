@@ -64,7 +64,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      # GitHub's Ubuntu runner already provides Android SDK command-line tools.
+      # setup-android@v3 tries to install the obsolete 'tools' package on newer runners.
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses >/dev/null || true
       - run: |
           sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0' 'ndk;29.0.13846066'
           echo "NDK_HOME=$ANDROID_HOME/ndk/29.0.13846066" >> "$GITHUB_ENV"
