@@ -55,6 +55,10 @@ replaceOnce('scripts/utils/paths.ts',
 replaceOnce('scripts/utils/paths.ts',
   "import path from 'path';",
   "import path from 'path';\\nimport { fileURLToPath } from 'node:url';".replace('\\n', '\n'));
+// Upstream packaging spawns npm without a Windows command shell.
+replaceOnce('scripts/utils/createTempBuildDir.ts',
+  "      stdio: 'inherit',",
+  "      stdio: 'inherit',\\n      shell: process.platform === 'win32',".replace('\\n', '\n'));
 replaceOnce('src/mobile/pages/home.tsx', "title: localize('home.title', 'Home'),", "title: 'Still',");
 replaceOnce('index.html', '<title>HamsterBase Tasks</title>', '<title>Still — tasks, quietly</title>');
 console.log('Still UI installed. HamsterBase services, data model, sync and backend are unchanged.');
