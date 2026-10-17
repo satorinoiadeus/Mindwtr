@@ -69,6 +69,7 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm web:build
           pnpm exec cap sync android
+          printf 'versionCode 2026101701\nversionName 2026.10.1701\n' > android/version
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
