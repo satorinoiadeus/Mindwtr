@@ -62,7 +62,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
+      - name: Use preinstalled Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          sdkmanager --list_installed | head -40
       - run: node still-overlay/still-hamsterbase/apply.mjs upstream
       - name: Build Android debug APK
         working-directory: upstream
