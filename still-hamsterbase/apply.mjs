@@ -66,6 +66,16 @@ replaceOnce('scripts/commands/electronPack.ts',
 replaceOnce('scripts/commands/electronPack/config/win32-x64.ts',
   "productName: 'Hamsterbase Tasks Desktop',",
   "productName: 'Still',");
+// Rebrand visible Android launcher label and Capacitor display name only.
+replaceOnce('android/app/src/main/res/values/strings.xml',
+  '<string name="app_name">HamsterBase Tasks</string>',
+  '<string name="app_name">Still</string>');
+replaceOnce('android/app/src/main/res/values/strings.xml',
+  '<string name="title_activity_main">Tasks</string>',
+  '<string name="title_activity_main">Still</string>');
+replaceOnce('capacitor.config.ts',
+  "appName: 'HamsterBase Tasks',",
+  "appName: 'Still',");
 replaceOnce('src/mobile/pages/home.tsx', "title: localize('home.title', 'Home'),", "title: 'Still',");
 replaceOnce('index.html', '<title>HamsterBase Tasks</title>', '<title>Still — tasks, quietly</title>');
 console.log('Still UI installed. HamsterBase services, data model, sync and backend are unchanged.');
