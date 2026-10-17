@@ -2,7 +2,7 @@ name: Still — HamsterBase UI builds
 on:
   workflow_dispatch:
   push:
-    branches: [still-hamsterbase-rebuild]
+    branches: [still-hamsterbase-rebuild, main]
     paths:
       - 'still-hamsterbase/**'
       - '.github/workflows/still-hamsterbase.yml'
@@ -62,10 +62,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Use preinstalled Android SDK
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          sdkmanager --list_installed | head -40
       - run: node still-overlay/still-hamsterbase/apply.mjs upstream
       - name: Build Android debug APK
         working-directory: upstream
