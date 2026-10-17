@@ -41,7 +41,7 @@ for (const base of ['src/desktop']) {
       if (entry.isDirectory()) walk(file);
       else if (/\.(tsx?|jsx?)$/.test(entry.name)) {
         const source = read(file);
-        const corrected = source.replaceAll('@/desktop/components/Settings/', '@/desktop/components/settings/');
+        const corrected = source.replaceAll('/Settings/', '/settings/');
         if (corrected !== source) fs.writeFileSync(path.join(root, file), corrected);
       }
     }
