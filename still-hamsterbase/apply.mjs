@@ -59,6 +59,13 @@ replaceOnce('scripts/utils/paths.ts',
 replaceOnce('scripts/utils/createTempBuildDir.ts',
   "      stdio: 'inherit',",
   "      stdio: 'inherit',\\n      shell: process.platform === 'win32',".replace('\\n', '\n'));
+// Packaging should create a local installer, not attempt a GitHub release.
+replaceOnce('scripts/commands/electronPack.ts',
+  'const buildResult = await build(configResult);',
+  "const buildResult = await build({ ...configResult, publish: 'never' });");
+replaceOnce('scripts/commands/electronPack/config/win32-x64.ts',
+  "productName: 'Hamsterbase Tasks Desktop',",
+  "productName: 'Still',");
 replaceOnce('src/mobile/pages/home.tsx', "title: localize('home.title', 'Home'),", "title: 'Still',");
 replaceOnce('index.html', '<title>HamsterBase Tasks</title>', '<title>Still — tasks, quietly</title>');
 console.log('Still UI installed. HamsterBase services, data model, sync and backend are unchanged.');
