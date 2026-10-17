@@ -1,0 +1,108 @@
+name: Still — HamsterBase UI builds
+on:
+  workflow_dispatch:
+  push:
+    branches: [still-hamsterbase-rebuild, main]
+    paths:
+      - 'still-hamsterbase/**'
+      - '.github/workflows/still-hamsterbase.yml'
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: still-overlay
+      - uses: actions/checkout@v4
+        with:
+          repository: beocaca/tasks_hamsterbase
+          ref: 2da27f7788f4941b412fc1b0e0060c83e3c24cbe
+          path: upstream
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10.15.0'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: upstream/pnpm-lock.yaml
+      - name: Apply Still UI (preserves HamsterBase backend)
+        run: node still-overlay/still-hamsterbase/apply.mjs upstream
+      - name: Install dependencies and build web
+        working-directory: upstream
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm web:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Still-web
+          path: upstream/dist/
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: still-overlay
+      - uses: actions/checkout@v4
+        with:
+          repository: beocaca/tasks_hamsterbase
+          ref: 2da27f7788f4941b412fc1b0e0060c83e3c24cbe
+          path: upstream
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10.15.0'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: upstream/pnpm-lock.yaml
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: node still-overlay/still-hamsterbase/apply.mjs upstream
+      - name: Build Android debug APK
+        working-directory: upstream
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm web:build
+          pnpm exec cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Still-Android-debug-APK
+          path: upstream/android/app/build/outputs/apk/debug/*.apk
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: still-overlay
+      - uses: actions/checkout@v4
+        with:
+          repository: beocaca/tasks_hamsterbase
+          ref: 2da27f7788f4941b412fc1b0e0060c83e3c24cbe
+          path: upstream
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10.15.0'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: upstream/pnpm-lock.yaml
+      - run: node still-overlay/still-hamsterbase/apply.mjs upstream
+      - name: Build Windows installer
+        working-directory: upstream
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm electron:build
+          pnpm electron:pack --target win32-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Still-Windows
+          path: upstream/release/**
