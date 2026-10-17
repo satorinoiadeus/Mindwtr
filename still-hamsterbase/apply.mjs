@@ -33,6 +33,28 @@ replaceOnce('src/mobile/App.tsx', '      <BrowserRouter>', '      <StillTransfer
 replaceOnce('src/desktop/app.tsx', "import { SidebarLayout } from '@/desktop/components/SidebarLayout/SidebarLayout.tsx';",
   "import { StillTransfer } from '@/still/StillTransfer';\nimport { SidebarLayout } from '@/desktop/components/SidebarLayout/SidebarLayout.tsx';");
 replaceOnce('src/desktop/app.tsx', '      <TreeSelectOverlay />', '      <TreeSelectOverlay />\n      <StillTransfer />');
+// Upstream has mixed-case Settings imports that fail on case-sensitive Linux CI.
+for (const base of ['src/desktop']) {
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(file);
+      else if (/\\.(tsx?|jsx?)$/.test(entry.name)) {
+        const source = read(file);
+        const corrected = source.replaceAll('@/desktop/components/Settings/', '@/desktop/components/settings/');
+        if (corrected !== source) fs.writeFileSync(path.join(root, file), corrected);
+      }
+    }
+  };
+  walk(base);
+}
+// Upstream's URL.pathname-based path helper generates D:\\D:\\... on Windows.
+replaceOnce('scripts/utils/paths.ts',
+  "const __dirname = path.dirname(new URL(import.meta.url).pathname);",
+  "const __dirname = path.dirname(fileURLToPath(import.meta.url));");
+replaceOnce('scripts/utils/paths.ts',
+  "import path from 'path';",
+  "import path from 'path';\\nimport { fileURLToPath } from 'node:url';".replace('\\n', '\n'));
 replaceOnce('src/mobile/pages/home.tsx', "title: localize('home.title', 'Home'),", "title: 'Still',");
 replaceOnce('index.html', '<title>HamsterBase Tasks</title>', '<title>Still — tasks, quietly</title>');
 console.log('Still UI installed. HamsterBase services, data model, sync and backend are unchanged.');
